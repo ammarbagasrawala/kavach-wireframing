@@ -4,6 +4,7 @@ import React from "react";
 import Layout from "../components/Layout";
 import PageHeader from "../components/PageHeader";
 import { Settings, ShieldCheck, Headphones, Globe } from "lucide-react";
+import { addAuditLog } from "../components/AuditLogger";
 
 export default function SettingsPage() {
     return (
@@ -59,7 +60,15 @@ function SettingItem({ icon: Icon, title, value }: any) {
                     <span className="text-[12px] text-[var(--muted-foreground)]">{value}</span>
                 </div>
             </div>
-            <button className="text-[13px] font-700 text-[var(--primary-500)]">Change</button>
+            <button
+                onClick={() => {
+                    addAuditLog("Setting Updated", `Changed ${title} preference`, "Info");
+                    alert(`${title} updated successfully`);
+                }}
+                className="text-[13px] font-700 text-[var(--primary-500)]"
+            >
+                Change
+            </button>
         </div>
     );
 }

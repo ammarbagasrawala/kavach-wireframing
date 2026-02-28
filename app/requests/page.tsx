@@ -20,6 +20,7 @@ import {
     Calendar,
     FileText
 } from "lucide-react";
+import { addAuditLog } from "../components/AuditLogger";
 
 interface KYCRequest {
     id: string;
@@ -79,17 +80,12 @@ export default function RequestsPage() {
             localStorage.setItem("kavach_kyc_requests", JSON.stringify(updatedRequests));
 
             // Logic for audit logging
-            const logs = JSON.parse(localStorage.getItem("kavach_audit_logs") || "[]");
             const targetReq = requests.find(r => r.id === id);
-
-            logs.unshift({
-                id: `req-act-${Date.now()}-${Math.random()}`,
-                action: action === "granted" ? "KYC Data Shared" : "KYC Request Rejected",
-                details: `${action === "granted" ? "Tokenized KYC package" : "Data request"} for ${targetReq?.purpose} shared with ${targetReq?.org}`,
-                time: "Just Now",
-                status: action === "granted" ? "Success" : "Rejected"
-            });
-            localStorage.setItem("kavach_audit_logs", JSON.stringify(logs));
+            addAuditLog(
+                action === "granted" ? "KYC Data Shared" : "KYC Request Rejected",
+                `${action === "granted" ? "Tokenized KYC package" : "Data request"} for ${targetReq?.purpose} shared with ${targetReq?.org}`,
+                action === "granted" ? "Success" : "Warning"
+            );
 
             setLoadingAction(null);
         }, 1500);
@@ -245,8 +241,8 @@ function RequestCard({ request, onGrant, onDeny, isLoading }: { request: KYCRequ
                     </div>
                     <div className="flex flex-col gap-2">
                         <span className="text-[10px] md:text-[11px] text-[var(--muted-foreground)] font-800 uppercase tracking-widest">Data Retention</span>
-                        <div className="flex items-center gap-2 px-3 py-2 bg-[var(--amber-500)]/5 border border-[var(--amber-500)]/20 rounded-[var(--radius-lg)] w-fit sm:w-auto">
-                            <Calendar className="w-4 h-4 text-[var(--amber-600)]" />
+                        <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-warning-600)]/5 border border-[var(--color-warning-600)]/20 rounded-[var(--radius-lg)] w-fit sm:w-auto">
+                            <Calendar className="w-4 h-4 text-[var(--color-warning-600)]" />
                             <span className="text-[12px] md:text-[13px] font-700 text-[var(--neutral-900)]">{request.retention}</span>
                         </div>
                     </div>

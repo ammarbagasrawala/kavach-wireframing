@@ -24,6 +24,7 @@ import {
     Cpu,
     ScanFace
 } from "lucide-react";
+import { addAuditLog } from "../components/AuditLogger";
 
 // --- Components for Steps (truncated versions of earlier ones for maintenance) ---
 
@@ -115,9 +116,9 @@ const AssistedSetup = ({ onBack, onComplete }: any) => (
             ))}
         </div>
 
-        <div className="mt-4 p-4 rounded-[var(--radius-lg)] bg-blue-50 border border-blue-200 flex gap-3">
-            <HelpCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-            <p className="text-[12px] text-blue-700 leading-normal italic">
+        <div className="mt-4 p-4 rounded-[var(--radius-lg)] bg-[var(--primary-500)]/5 border border-[var(--primary-500)]/20 flex gap-3">
+            <HelpCircle className="w-5 h-5 text-[var(--primary-500)] shrink-0 mt-0.5" />
+            <p className="text-[12px] text-[var(--primary-500)] leading-normal italic">
                 You can do this at any Sahaj Kendra or Aadhaar Center if you need physical assistance.
             </p>
         </div>
@@ -502,7 +503,7 @@ function OnboardingContent() {
             <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-1000">
                 <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
                     <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[var(--primary-500)]/5 blur-[120px] rounded-full"></div>
-                    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[var(--primary-500)]/5 blur-[120px] rounded-full"></div>
                 </div>
 
                 <div className="mb-10 relative">
@@ -532,7 +533,11 @@ function OnboardingContent() {
                     <LoKeyButton
                         variant="primary"
                         size="xxl"
-                        onClick={() => { setIsLogin(false); setCurrentStep(1); }}
+                        onClick={() => {
+                            setIsLogin(false);
+                            setCurrentStep(1);
+                            addAuditLog("Onboarding Started", "User initiated new identity creation");
+                        }}
                         className="w-full text-[16px] font-800 uppercase tracking-widest shadow-xl group"
                         rightIcon={<ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
                     >
@@ -542,7 +547,11 @@ function OnboardingContent() {
                     <LoKeyButton
                         variant="tertiary"
                         size="xl"
-                        onClick={() => { setIsLogin(true); setCurrentStep(4); }}
+                        onClick={() => {
+                            setIsLogin(true);
+                            setCurrentStep(4);
+                            addAuditLog("Login Initiated", "Existing user started authentication flow", "Info");
+                        }}
                         className="w-full text-[15px] font-700"
                     >
                         Already have an identity? <span className="text-[var(--primary-500)] ml-1">Login</span>
@@ -571,14 +580,42 @@ function OnboardingContent() {
 
     return (
         <OnboardingLayout step={currentStep > 3 ? currentStep - 1 : currentStep} totalSteps={7} audioEnabled={audioEnabled} onAudioToggle={setAudioEnabled}>
-            {currentStep === 1 && <LanguageSelection selectedLang={selectedLang} onSelect={setSelectedLang} onContinue={() => setCurrentStep(2)} />}
-            {currentStep === 2 && <AuthGateway onDigiLocker={() => setCurrentStep(4)} onAssisted={() => setCurrentStep(3)} />}
-            {currentStep === 3 && <AssistedSetup onBack={() => setCurrentStep(2)} onComplete={() => window.open('https://www.digilocker.gov.in/', '_blank')} />}
+            {currentStep === 1 && <LanguageSelection selectedLang={selectedLang} onSelect={(l: string) => {
+                setSelectedLang(l);
+                addAuditLog("Language Updated", `Interface language set to ${l === 'en' ? 'English' : 'Hindi'}`);
+            }} onContinue={() => setCurrentStep(2)} />}
+            {currentStep === 2 && <AuthGateway onDigiLocker={() => {
+                setCurrentStep(4);
+                addAuditLog("Auth Path Selected", "User chose DigiLocker direct path");
+            }} onAssisted={() => {
+                setCurrentStep(3);
+                addAuditLog("Auth Path Selected", "User chose Assisted DigiLocker path");
+            }} />}
+            {currentStep === 3 && <AssistedSetup onBack={() => setCurrentStep(2)} onComplete={() => {
+                addAuditLog("Help Portal Accessed", "Opened DigiLocker external setup guide");
+                window.open('https://www.digilocker.gov.in/', '_blank');
+            }} />}
 
-            {currentStep === 4 && <PhoneInput isLogin={isLogin} onNext={(p: string) => { setPhone(p); setCurrentStep(5); }} />}
-            {currentStep === 5 && <OTPVerify phone={phone} onNext={() => isLogin ? setCurrentStep(7) : setCurrentStep(6)} onResend={() => alert("OTP Resent!")} />}
-            {currentStep === 6 && <OAuthSimulation onComplete={() => setCurrentStep(7)} />}
-            {currentStep === 7 && <UnifiedSecuritySetup isLogin={isLogin} onComplete={() => setCurrentStep(8)} />}
+            {currentStep === 4 && <PhoneInput isLogin={isLogin} onNext={(p: string) => {
+                setPhone(p);
+                setCurrentStep(5);
+                addAuditLog("OTP Requested", `Verification code sent to +91 ${p.slice(0, 2)}...${p.slice(-2)}`);
+            }} />}
+            {currentStep === 5 && <OTPVerify phone={phone} onNext={() => {
+                addAuditLog("Mobile Verified", "Successful SMS authentication");
+                isLogin ? setCurrentStep(7) : setCurrentStep(6);
+            }} onResend={() => {
+                addAuditLog("OTP Resend", "User requested new verification code", "Warning");
+                alert("OTP Resent!");
+            }} />}
+            {currentStep === 6 && <OAuthSimulation onComplete={() => {
+                addAuditLog("DigiLocker Linked", "Secure OAuth 2.0 handshake successful");
+                setCurrentStep(7);
+            }} />}
+            {currentStep === 7 && <UnifiedSecuritySetup isLogin={isLogin} onComplete={() => {
+                addAuditLog(isLogin ? "Auth Checked" : "Security Setup Complete", isLogin ? "Session secured with device hardware" : "Biometrics and PIN successfully registered");
+                setCurrentStep(8);
+            }} />}
 
             {currentStep === 8 && (
                 <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-6 animate-in fade-in zoom-in duration-500">
@@ -621,6 +658,7 @@ function OnboardingContent() {
                         size="xxl"
                         onClick={() => {
                             localStorage.setItem("kavach_identity_verified", "false"); // Still need VKYC for full verify
+                            addAuditLog("Session Active", "User redirected to Dashboard");
                             window.location.href = "/dashboard";
                         }}
                         rightIcon={<ArrowRight className="w-5 h-5" />}

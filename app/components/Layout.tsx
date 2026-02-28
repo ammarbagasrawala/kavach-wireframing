@@ -88,8 +88,7 @@ export default function Layout({ children, currentPage = "Dashboard", productNam
     const navItems = [
         { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
         { label: "Requests", icon: History, href: "/requests", badge: requestCount },
-        { label: "Add Documents", icon: UserRoundCheck, href: "/add-documents" },
-        { label: "My Credentials", icon: ShieldCheck, href: "/credentials" },
+        { label: "Manage Credentials", icon: ShieldCheck, href: "/credentials" },
         { label: "Audit Logs", icon: Clock, href: "/audit-logs" },
         { label: "Navigator", icon: Layers, href: "/" },
     ];
@@ -252,7 +251,7 @@ export default function Layout({ children, currentPage = "Dashboard", productNam
 
             {/* Mobile Bottom Nav */}
             <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[70px] bg-[var(--neutral-900)] border-t border-[rgba(255,255,255,0.08)] px-4 flex items-center justify-around z-50">
-                {navItems.filter(item => ["Dashboard", "Requests", "Add Documents", "My Credentials"].includes(item.label)).map((item) => (
+                {navItems.filter(item => ["Dashboard", "Requests", "Manage Credentials"].includes(item.label)).map((item) => (
                     <button
                         key={item.label}
                         onClick={() => window.location.href = (item as any).href}
@@ -263,7 +262,7 @@ export default function Layout({ children, currentPage = "Dashboard", productNam
                     >
                         <item.icon className="w-5 h-5" />
                         <span className="text-[9px] font-800 uppercase tracking-tighter text-center leading-none px-1">
-                            {item.label === "Add Documents" ? "Add" : item.label === "My Credentials" ? "Vault" : item.label}
+                            {item.label === "Manage Credentials" ? "Vault" : item.label}
                         </span>
                         {item.badge && (
                             <span className="absolute top-[2px] right-2 bg-[var(--color-error-600)] text-white text-[9px] font-900 w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-[var(--neutral-900)] shadow-lg animate-in zoom-in duration-300">
@@ -289,6 +288,6 @@ export default function Layout({ children, currentPage = "Dashboard", productNam
                     )}
                 </button>
             </nav>
-        </div>
+        </div >
     );
 }

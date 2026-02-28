@@ -32,6 +32,7 @@ import {
     Globe,
     Zap
 } from "lucide-react";
+import { addAuditLog } from "../components/AuditLogger";
 
 // --- Flow 2 Components ---
 
@@ -66,7 +67,10 @@ const UnifiedConsent = ({ onNext }: any) => {
                 <span className="text-[13px] text-[var(--muted-foreground)]">I understand my VCs remain <strong>locked</strong> until VKYC is complete.</span>
             </label>
 
-            <LoKeyButton variant="primary" size="xl" className="w-full mt-auto" disabled={!accepted} onClick={onNext}>
+            <LoKeyButton variant="primary" size="xl" className="w-full mt-auto" disabled={!accepted} onClick={() => {
+                addAuditLog("Privacy Consent", "User agreed to identity data collection and privacy promise");
+                onNext();
+            }}>
                 Agree & Continue
             </LoKeyButton>
         </div>
@@ -112,8 +116,10 @@ const OTPVerification = ({ onNext, selectedDocs = ["aadhaar", "pan", "ckycr"] }:
     const handleVerify = () => {
         setOtp(["", "", "", "", "", ""]);
         if (docPageIndex < docsToVerify.length - 1) {
+            addAuditLog("Registry Auth Success", `Successfully authorized ${docMeta.title} fetch`);
             setDocPageIndex(docPageIndex + 1);
         } else {
+            addAuditLog("Identity Data Fetched", `All ${docsToVerify.length} requested documents retrieved and verified`);
             onNext();
         }
     };
@@ -188,7 +194,11 @@ const FaceCapture = ({ onNext }: any) => {
 
     const startScan = () => {
         setStatus("scanning");
-        setTimeout(() => setStatus("success"), 3000);
+        addAuditLog("Face Capture Started", "Initiated live biometric liveness check");
+        setTimeout(() => {
+            setStatus("success");
+            addAuditLog("Face Match Success", "Live face confirmed against device hardware");
+        }, 3000);
     };
 
     useEffect(() => {
@@ -380,12 +390,12 @@ const FieldSelection = ({ onComplete }: any) => {
             </div>
 
             {/* DigiLocker Awareness Banner */}
-            <div className="p-4 rounded-[var(--radius-xl)] bg-blue-500/10 border border-blue-500/20 flex gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm">
-                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white shrink-0 shadow-md">
+            <div className="p-4 rounded-[var(--radius-xl)] bg-[var(--primary-500)]/10 border border-[var(--primary-500)]/20 flex gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-[var(--primary-500)] flex items-center justify-center text-white shrink-0 shadow-md">
                     <Zap className="w-5 h-5" />
                 </div>
                 <div className="flex flex-col gap-1">
-                    <span className="text-[14px] font-800 text-blue-600 tracking-tight">Records Found in DigiLocker</span>
+                    <span className="text-[14px] font-800 text-[var(--primary-600)] tracking-tight">Records Found in DigiLocker</span>
                     <p className="text-[12px] text-[var(--muted-foreground)] leading-relaxed font-500">
                         Based on your profile, we've located **Aadhaar, PAN, and Passport** in your linked DigiLocker. Would you like to include these in your VC for maximum utility?
                     </p>
@@ -529,8 +539,7 @@ const DocCard = ({ doc, expanded, isSelected, onToggleExpand, onRemove }: any) =
                             </span>
                             <span className="w-1 h-1 rounded-full bg-[var(--border)]"></span>
                             <span className={cn(
-                                "text-[10px] font-900 uppercase tracking-tighter",
-                                doc.source === "DigiLocker" ? "text-blue-500" : "text-[var(--primary-500)]"
+                                "text-[10px] font-900 uppercase tracking-tighter text-[var(--primary-500)]"
                             )}>
                                 {doc.source}
                             </span>
@@ -540,7 +549,7 @@ const DocCard = ({ doc, expanded, isSelected, onToggleExpand, onRemove }: any) =
 
                 <div className="flex items-center gap-3">
                     {onRemove && (
-                        <button onClick={onRemove} className="p-2 text-[var(--muted-foreground)] hover:text-red-500 transition-colors">
+                        <button onClick={onRemove} className="p-2 text-[var(--muted-foreground)] hover:text-[var(--color-destructive-600)] transition-colors">
                             <AlertCircle className="w-5 h-5" />
                         </button>
                     )}
@@ -649,11 +658,11 @@ const VKYCPrompt = ({ onConnect, onSchedule, onSkip }: any) => {
             </div>
 
             {/* Locked State Warning */}
-            <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--amber-500)]/10 border border-[var(--amber-500)]/30 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-[var(--amber-600)] shrink-0 mt-0.5" />
+            <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--color-warning-600)]/10 border border-[var(--color-warning-600)]/30 flex gap-3">
+                <AlertCircle className="w-5 h-5 text-[var(--color-warning-600)] shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-0.5">
-                    <span className="text-[13px] font-800 text-[var(--amber-900)] uppercase tracking-tight">Account Not Yet Live</span>
-                    <p className="text-[12px] font-600 text-[var(--amber-800)] leading-snug">
+                    <span className="text-[13px] font-800 text-[var(--color-warning-600)] uppercase tracking-tight">Account Not Yet Live</span>
+                    <p className="text-[12px] font-600 text-[color-mix(in_srgb,var(--color-warning-600),black_15%)] leading-snug">
                         Your VCs will remain <strong>locked</strong> and unusable for any tokenized KYC until VKYC is successfully completed.
                     </p>
                 </div>
@@ -867,7 +876,7 @@ const BlockchainRegistration = ({ onComplete }: any) => {
 
         const steps = [
             { p: 30, s: "Creating cryptographic hashes...", h: "" },
-            { p: 60, s: "Singing with Biometric Binding...", h: generateHash() },
+            { p: 60, s: "Signing with Biometric Binding...", h: generateHash() },
             { p: 100, s: "Written to Blockchain Network", h: generateHash() }
         ];
 
@@ -880,6 +889,7 @@ const BlockchainRegistration = ({ onComplete }: any) => {
                 current++;
             } else {
                 clearInterval(interval);
+                addAuditLog("Identity Anchored", "Secure fingerprints registered on Kavach Blockchain");
                 setTimeout(onComplete, 1500);
             }
         }, 2000);
@@ -924,10 +934,11 @@ const BlockchainRegistration = ({ onComplete }: any) => {
     );
 };
 
-const SuccessLocked = () => {
+const SuccessLocked = ({ issuedDocs }: { issuedDocs: string[] }) => {
     useEffect(() => {
         localStorage.setItem("kavach_pending_kyc", "false");
         localStorage.setItem("kavach_identity_verified", "true");
+        localStorage.setItem("kavach_issued_docs", JSON.stringify(issuedDocs));
         // Clear pending logs
         const logs = localStorage.getItem("kavach_audit_logs");
         if (logs) {
@@ -1024,9 +1035,13 @@ export default function CreateVCPage() {
             {currentStep === 5 && <EnrichmentHub onNext={() => setCurrentStep(6)} />}
             {currentStep === 6 && (
                 <VKYCPrompt
-                    onConnect={() => setCurrentStep(7)}
+                    onConnect={() => {
+                        addAuditLog("VKYC Initiated", "Attempting secure connection with live verification agent");
+                        setCurrentStep(7);
+                    }}
                     onSchedule={handleScheduleVkyc}
                     onSkip={() => {
+                        addAuditLog("VKYC Deferred", "Identity remains locked until Video KYC is completed", "Warning");
                         localStorage.setItem("kavach_pending_kyc", "true");
                         window.location.href = "/dashboard";
                     }}
@@ -1034,7 +1049,7 @@ export default function CreateVCPage() {
             )}
             {currentStep === 7 && <VKYCSimulation onComplete={() => setCurrentStep(8)} />}
             {currentStep === 8 && <BlockchainRegistration onComplete={() => setCurrentStep(9)} />}
-            {currentStep === 9 && <SuccessLocked />}
+            {currentStep === 9 && <SuccessLocked issuedDocs={selectedDocs} />}
         </OnboardingLayout>
     );
 }

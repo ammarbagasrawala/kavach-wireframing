@@ -63,7 +63,7 @@ export default function NavigatorPage() {
       title: "Bootstrap & Entry",
       description: "The initial 'cold start' experience for unauthenticated users.",
       icon: Globe,
-      color: "bg-blue-600",
+      color: "bg-[var(--primary-600)]",
       items: [
         { label: "Onboarding Splash", icon: Smartphone, href: "/onboarding" },
         { label: "Authentication Gateway", icon: Fingerprint, href: "/onboarding?login=true" },
@@ -73,7 +73,7 @@ export default function NavigatorPage() {
       title: "Identity Issuance",
       description: "The core Verifiable Credential creation and enrichment flow.",
       icon: ShieldCheck,
-      color: "bg-indigo-600",
+      color: "bg-[var(--primary-500)]",
       items: [
         { label: "Unified Consent & OTP", icon: ShieldCheck, href: "/create-vc" },
         { label: "Enrichment Hub", icon: Zap, href: "/add-documents" },
@@ -83,7 +83,7 @@ export default function NavigatorPage() {
       title: "Daily Management",
       description: "Viewing credentials, tracking activity, and vault security.",
       icon: LayoutDashboard,
-      color: "bg-emerald-600",
+      color: "bg-[var(--color-success-700)]",
       items: [
         { label: "Main Dashboard", icon: LayoutDashboard, href: "/dashboard" },
         { label: "Secure Vault Access", icon: FileText, href: "/credentials" },
@@ -94,7 +94,7 @@ export default function NavigatorPage() {
       title: "Ecosystem Utility",
       description: "Interactions with third-party organizations and verifiers.",
       icon: UserRoundCheck,
-      color: "bg-rose-600",
+      color: "bg-[var(--color-destructive-600)]",
       items: [
         { label: "KYC Requests Hub", icon: ShieldAlert, href: "/requests" },
         { label: "Selective Disclosure", icon: UserRoundCheck, href: "/requests" },
@@ -107,7 +107,7 @@ export default function NavigatorPage() {
       {/* Background Orbs */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[var(--primary-500)]/10 blur-[120px] rounded-full"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[var(--primary-500)]/10 blur-[120px] rounded-full"></div>
       </div>
 
       <div className="max-w-6xl w-full flex flex-col gap-12 relative">
