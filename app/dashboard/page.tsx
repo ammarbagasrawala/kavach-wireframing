@@ -81,7 +81,7 @@ export default function DashboardPage() {
                 }
             />
 
-            <main className="flex-1 overflow-y-auto p-6 bg-[var(--background)]">
+            <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[var(--background)] pb-24 lg:pb-6">
                 {/* Profile Incomplete Banner */}
                 {!pendingKyc && !verified && (
                     <div className="mb-6 p-4 md:p-6 rounded-[var(--radius-xl)] bg-[color-mix(in_srgb,var(--primary-500)_8%,transparent)] border border-[var(--primary-500)] flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-6">

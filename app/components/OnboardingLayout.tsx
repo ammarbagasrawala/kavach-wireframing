@@ -27,9 +27,9 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             <div className="w-full h-full md:h-auto md:max-w-[440px] bg-[var(--card)] md:rounded-[var(--radius-xl)] shadow-none md:shadow-elevation-md flex flex-col overflow-hidden min-h-screen md:min-h-[600px] border-0 md:border md:border-[var(--border)]">
 
                 {/* Header */}
-                <div className="px-4 md:px-6 pt-6 md:pt-8 pb-4 flex items-center justify-between">
-                    <div className="bg-white p-1 md:p-1.5 rounded-[var(--radius-md)] border border-[var(--border)] flex items-center justify-center shrink-0">
-                        <img src="/logo.png" alt="Kavach Logo" className="h-8 md:h-10 w-auto object-contain" />
+                <div className="px-5 md:px-6 pt-6 md:pt-8 pb-4 flex items-center justify-between">
+                    <div className="bg-white p-1 md:p-1.5 rounded-[var(--radius-md)] border border-[var(--border)] flex items-center justify-center shrink-0 shadow-sm">
+                        <img src="/logo.png" alt="Kavach Logo" className="h-7 md:h-10 w-auto object-contain" />
                     </div>
 
                     {showAudioToggle && (
@@ -65,7 +65,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                 )}
 
                 {/* Main Content */}
-                <main className="flex-1 p-6 flex flex-col overflow-y-auto">
+                <main className="flex-1 p-5 md:p-6 flex flex-col overflow-y-auto">
                     {children}
                 </main>
 

@@ -126,10 +126,10 @@ const OTPVerification = ({ onNext, selectedDocs = ["aadhaar", "pan", "ckycr"] }:
                         <docMeta.icon className="w-4 h-4" />
                         {docMeta.title} ({docMeta.registry})
                     </div>
-                    <h2 className="text-[20px] font-800 tracking-tight">
+                    <h2 className="text-[18px] md:text-[20px] font-800 tracking-tight">
                         {isSearching ? (currentDocId === 'ckycr' ? 'Querying Registry...' : 'Querying DigiLocker...') : "Verify & Fetch"}
                     </h2>
-                    <p className="text-[14px] text-[var(--muted-foreground)]">
+                    <p className="text-[13px] md:text-[14px] text-[var(--muted-foreground)] leading-tight">
                         {isSearching
                             ? (currentDocId === 'ckycr' ? `Searching Central Registry for your records...` : `Fetching ${docMeta.title} record from DigiLocker...`)
                             : `A 6-digit code has been sent to your mobile to authorize ${docMeta.title} fetch.`}
@@ -154,12 +154,12 @@ const OTPVerification = ({ onNext, selectedDocs = ["aadhaar", "pan", "ckycr"] }:
                         </div>
 
                         <div className="flex flex-col gap-4">
-                            <div className="grid grid-cols-6 gap-2">
+                            <div className="grid grid-cols-6 gap-1.5 md:gap-2">
                                 {otp.map((digit, i) => (
                                     <input
                                         key={i} id={`otp-${i}`} type="text" maxLength={1} value={digit}
                                         onChange={e => handleOtpChange(i, e.target.value)}
-                                        className="w-full aspect-square text-center text-[20px] font-800 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] focus:border-[var(--primary-500)] outline-none"
+                                        className="w-full aspect-square text-center text-[18px] md:text-[20px] font-800 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] focus:border-[var(--primary-500)] outline-none"
                                         autoFocus={i === 0}
                                     />
                                 ))}

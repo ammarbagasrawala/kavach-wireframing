@@ -19,7 +19,7 @@ interface PageHeaderProps {
 
 const PageHeader: React.FC<PageHeaderProps> = ({ title, breadcrumbs = [], entryCount, actions, className }) => {
     return (
-        <div className={cn("bg-[var(--card)] border-b border-[var(--border)] px-6 py-4 flex flex-col gap-1 shrink-0", className)}>
+        <div className={cn("bg-[var(--card)] border-b border-[var(--border)] px-4 md:px-6 py-4 flex flex-col gap-1 shrink-0", className)}>
             <nav className="hidden md:flex items-center gap-1">
                 {breadcrumbs.map((bc, idx) => (
                     <React.Fragment key={idx}>
