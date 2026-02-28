@@ -1,241 +1,188 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Layout from "./components/Layout";
-import PageHeader from "./components/PageHeader";
-import StatCard from "./components/StatCard";
+import React from "react";
 import LoKeyButton from "./components/LoKeyButton";
-import StatusChip from "./components/StatusChip";
 import { cn } from "./components/LoKeyButton";
 import {
-  Users,
   ShieldCheck,
-  Clock,
-  Plus,
-  Filter,
-  ShieldAlert,
   ArrowRight,
-  Lock as LockIcon,
-  FileText
+  Smartphone,
+  UserRoundCheck,
+  History,
+  ShieldAlert,
+  RefreshCcw,
+  FileText,
+  LayoutDashboard,
+  Globe,
+  Fingerprint,
+  Zap
 } from "lucide-react";
 
-export default function Home() {
-  const [pendingKyc, setPendingKyc] = useState(false);
-  const [verified, setVerified] = useState(false);
-  const [fetchedDocs, setFetchedDocs] = useState<string[]>([]);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+const FlowCard = ({ title, description, items, icon: Icon, color }: any) => (
+  <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius-xl)] p-6 flex flex-col gap-6 shadow-elevation-sm hover:shadow-elevation-md transition-all group overflow-hidden relative">
+    <div className={cn("absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 opacity-[0.03] transition-transform group-hover:scale-110", color)}>
+      <Icon className="w-full h-full" />
+    </div>
 
-  useEffect(() => {
-    const isPending = localStorage.getItem("kavach_pending_kyc") === "true";
-    const isVerified = localStorage.getItem("kavach_identity_verified") === "true";
-    setPendingKyc(isPending);
-    setVerified(isVerified);
+    <div className="flex flex-col gap-2 relative">
+      <div className={cn("w-12 h-12 rounded-[var(--radius-lg)] flex items-center justify-center text-white shadow-lg", color)}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <h2 className="text-[20px] font-800 tracking-tight mt-2">{title}</h2>
+      <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed">{description}</p>
+    </div>
 
-    const docs = localStorage.getItem("kavach_fetched_docs");
-    if (docs) setFetchedDocs(JSON.parse(docs));
+    <div className="flex flex-col gap-2 mt-auto">
+      {items.map((item: any, i: number) => (
+        <button
+          key={i}
+          onClick={() => window.location.href = item.href}
+          className="flex items-center justify-between p-3 rounded-[var(--radius-md)] bg-[var(--muted)]/50 hover:bg-[var(--primary-500)] hover:text-white transition-all text-left"
+        >
+          <div className="flex items-center gap-3">
+            <item.icon className="w-4 h-4 shrink-0" />
+            <span className="text-[13px] font-700 tracking-tight">{item.label}</span>
+          </div>
+          <ArrowRight className="w-3.5 h-3.5 opacity-50" />
+        </button>
+      ))}
+    </div>
+  </div>
+);
 
-    const logs = localStorage.getItem("kavach_audit_logs");
-    if (logs) {
-      setAuditLogs(JSON.parse(logs));
-    } else {
-      const defaultLogs = [
-        { id: 1, action: "Device Binding", details: "Secure Enclave activation successful", time: "2h ago", status: "Success" },
-        { id: 2, action: "Authentication", details: "Linked via DigiLocker #9021", time: "1h ago", status: "Success" }
-      ];
-      setAuditLogs(defaultLogs);
-      localStorage.setItem("kavach_audit_logs", JSON.stringify(defaultLogs));
+export default function NavigatorPage() {
+  const resetPrototype = () => {
+    if (confirm("This will clear all simulation data and take you to the first screen. Proceed?")) {
+      localStorage.clear();
+      window.location.href = "/onboarding";
     }
-  }, []);
-
-  const docLibrary: Record<string, any> = {
-    "ssc": { name: "Class X Marksheet", provider: "CBSE" },
-    "hsc": { name: "Class XII Marksheet", provider: "CBSE" },
-    "degree": { name: "Degree Certificate", provider: "Mumbai University" },
-    "passport": { name: "Passport", provider: "Min. of External Affairs" },
-    "exp": { name: "Experience Letter", provider: "Previous Employer" },
   };
 
+  const categories = [
+    {
+      title: "Bootstrap & Entry",
+      description: "The initial 'cold start' experience for unauthenticated users.",
+      icon: Globe,
+      color: "bg-blue-600",
+      items: [
+        { label: "Onboarding Splash", icon: Smartphone, href: "/onboarding" },
+        { label: "Authentication Gateway", icon: Fingerprint, href: "/login" },
+      ]
+    },
+    {
+      title: "Identity Issuance",
+      description: "The core Verifiable Credential creation and enrichment flow.",
+      icon: ShieldCheck,
+      color: "bg-indigo-600",
+      items: [
+        { label: "Unified Consent & OTP", icon: ShieldCheck, href: "/create-vc" },
+        { label: "Enrichment Hub", icon: Zap, href: "/add-documents" },
+      ]
+    },
+    {
+      title: "Daily Management",
+      description: "Viewing credentials, tracking activity, and vault security.",
+      icon: LayoutDashboard,
+      color: "bg-emerald-600",
+      items: [
+        { label: "Main Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+        { label: "Secure Vault Access", icon: FileText, href: "/credentials" },
+        { label: "Activity Trail", icon: History, href: "/audit-logs" },
+      ]
+    },
+    {
+      title: "Ecosystem Utility",
+      description: "Interactions with third-party organizations and verifiers.",
+      icon: UserRoundCheck,
+      color: "bg-rose-600",
+      items: [
+        { label: "KYC Requests Hub", icon: ShieldAlert, href: "/requests" },
+        { label: "Selective Disclosure", icon: UserRoundCheck, href: "/requests" },
+      ]
+    }
+  ];
+
   return (
-    <Layout currentPage="Dashboard">
-      <PageHeader
-        title="Dashboard"
-        breadcrumbs={[{ label: "Kavach" }, { label: "Dashboard" }]}
-        actions={
-          <>
-            <LoKeyButton variant="tertiary" size="s" leftIcon={<Filter className="w-4 h-4" />}>
-              Filter
-            </LoKeyButton>
+    <div className="min-h-screen bg-[var(--background)] flex flex-col items-center py-12 px-6">
+      {/* Background Orbs */}
+      <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[var(--primary-500)]/10 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full"></div>
+      </div>
+
+      <div className="max-w-6xl w-full flex flex-col gap-12 relative">
+        {/* Header */}
+        <div className="flex flex-col items-center text-center gap-4">
+          <div className="bg-white p-2 rounded-[var(--radius-lg)] shadow-xl mb-2">
+            <img src="/logo.png" alt="Kavach Logo" className="h-12 w-auto" />
+          </div>
+          <h1 className="text-[32px] md:text-[48px] font-900 tracking-tighter leading-tight bg-gradient-to-br from-[var(--neutral-900)] to-[var(--neutral-600)] bg-clip-text text-transparent">
+            Wireframe Navigator
+          </h1>
+          <p className="max-w-2xl text-[16px] md:text-[18px] text-[var(--muted-foreground)] leading-relaxed">
+            Experience India's first user-held tokenized KYC platform. Explore every flow,
+            from the first splash screen to secure document management.
+          </p>
+
+          <div className="flex items-center gap-4 mt-4">
             <LoKeyButton
               variant="primary"
-              size="s"
-              leftIcon={<Plus className="w-4 h-4" />}
-              onClick={() => window.location.href = verified ? "/add-documents" : "/create-vc"}
+              size="xl"
+              onClick={() => window.location.href = "/onboarding"}
+              rightIcon={<ArrowRight className="w-4 h-4" />}
             >
-              {verified ? "Add Documents" : "Verify Identity"}
+              Start Full Journey
             </LoKeyButton>
-          </>
-        }
-      />
-
-      <main className="flex-1 overflow-y-auto p-6 bg-[var(--background)]">
-        {/* Profile Incomplete Banner */}
-        {!pendingKyc && !verified && (
-          <div className="mb-6 p-4 md:p-6 rounded-[var(--radius-xl)] bg-[color-mix(in_srgb,var(--primary-500)_8%,transparent)] border border-[var(--primary-500)] flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-6">
-            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[var(--primary-500)] flex items-center justify-center text-white shrink-0 shadow-lg shadow-[var(--primary-500)]/20">
-              <ShieldAlert className="w-6 h-6 md:w-8 md:h-8" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-[16px] md:text-[18px] font-700 text-[var(--neutral-900)]">Identity Profile Incomplete</h2>
-              <p className="text-[13px] md:text-[14px] text-[var(--muted-foreground)]">Fetch your documents from DigiLocker to generate your Verifiable Credential.</p>
-            </div>
-            <LoKeyButton variant="primary" size="l" className="w-full md:w-auto" rightIcon={<ArrowRight className="w-4 h-4" />} onClick={() => window.location.href = "/create-vc"}>
-              Add Documents
+            <LoKeyButton
+              variant="tertiary"
+              size="xl"
+              className="bg-white"
+              leftIcon={<RefreshCcw className="w-4 h-4" />}
+              onClick={resetPrototype}
+            >
+              Reset Prototype
             </LoKeyButton>
           </div>
-        )}
-
-        {/* Orange Alert Banner (Locked State) */}
-        {pendingKyc && !verified && (
-          <div className="mb-6 p-4 md:p-6 rounded-[var(--radius-xl)] bg-[var(--amber-500)]/10 border border-[var(--amber-600)] flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-6">
-            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[var(--amber-500)] flex items-center justify-center text-white shrink-0">
-              <LockIcon className="w-6 h-6 md:w-8 md:h-8" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-[16px] md:text-[18px] font-700 text-[var(--neutral-900)]">Credentials Locked</h2>
-              <p className="text-[13px] md:text-[14px] text-[var(--muted-foreground)]">Complete Video KYC to unlock your generated credentials.</p>
-            </div>
-            <LoKeyButton variant="primary" size="l" className="w-full md:w-auto bg-[var(--amber-600)]" onClick={() => window.location.href = "/create-vc"}>
-              Add Documents
-            </LoKeyButton>
-          </div>
-        )}
-
-        {/* Success Banner (Unlocked State) */}
-        {verified && (
-          <div className="mb-6 p-4 md:p-6 rounded-[var(--radius-xl)] bg-[var(--color-success-700)]/10 border border-[var(--color-success-700)] flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-6">
-            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[var(--color-success-700)] flex items-center justify-center text-white shrink-0">
-              <ShieldCheck className="w-6 h-6 md:w-8 md:h-8" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-[16px] md:text-[18px] font-700 text-[var(--neutral-900)]">Identity Fully Verified</h2>
-              <p className="text-[13px] md:text-[14px] text-[var(--muted-foreground)]">Your credentials are unlocked and ready for selective disclosure.</p>
-            </div>
-            <LoKeyButton variant="tertiary" size="l" className="w-full md:w-auto" leftIcon={<Plus className="w-4 h-4" />} onClick={() => window.location.href = "/add-documents"}>
-              Add More
-            </LoKeyButton>
-          </div>
-        )}
-
-        <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-6 mb-8", (!pendingKyc && !verified) && "opacity-50")}>
-          <StatCard label="Total Verifications" value={verified ? "1" : "0"} icon={Users} />
-          <StatCard label="Active Credentials" value={pendingKyc || verified ? (2 + fetchedDocs.length).toString() : "0"} icon={ShieldCheck} />
-          <StatCard label="Audit Log Entries" value={auditLogs.length.toString()} icon={Clock} />
         </div>
 
-        {/* Credentials Grid */}
-        {(pendingKyc || verified) && (
-          <div className="mb-8">
-            <h2 className="text-[18px] font-800 mb-4 px-1">My Verifiable Credentials</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                { name: "Digital Aadhaar VC", provider: "UIDAI" },
-                { name: "Digital PAN VC", provider: "Income Tax Dept" },
-                ...fetchedDocs.map(id => ({
-                  name: docLibrary[id]?.name || "Document",
-                  provider: docLibrary[id]?.provider || "DigiLocker"
-                }))
-              ].map((vc, i) => (
-                <div key={i} className={cn(
-                  "bg-[var(--card)] border border-[var(--border)] p-5 rounded-[var(--radius-lg)] flex items-center justify-between group transition-all",
-                  !verified && "opacity-60"
-                )}>
-                  <div className="flex items-center gap-4">
-                    <div className={cn("w-12 h-12 rounded-[var(--radius-md)] flex items-center justify-center", verified ? "bg-[var(--primary-500)] text-white" : "bg-[var(--muted)] text-[var(--muted-foreground)]")}>
-                      <FileText className="w-6 h-6" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[15px] font-700">{vc.name}</span>
-                      <span className="text-[12px] text-[var(--muted-foreground)]">Issued by {vc.provider}</span>
-                    </div>
-                  </div>
-                  {verified ? (
-                    <LoKeyButton variant="ghost" size="xs" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => window.location.href = "/credentials"}>
-                      View Securely
-                    </LoKeyButton>
-                  ) : (
-                    <div className="flex items-center gap-1 px-2 py-0.5 bg-[var(--muted)] rounded-full text-[10px] font-700 text-[var(--muted-foreground)] uppercase">
-                      <LockIcon className="w-3 h-3" /> Locked
-                    </div>
-                  )}
-                </div>
-              ))}
+        {/* Categories Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {categories.map((cat, i) => (
+            <div key={i} className="animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: `${i * 100}ms` }}>
+              <FlowCard {...cat} />
+            </div>
+          ))}
+        </div>
+
+        {/* Footer Info */}
+        <div className="mt-8 p-6 bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius-xl)] flex flex-col md:flex-row items-center justify-between gap-6 shadow-elevation-sm">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-[var(--primary-500)]/10 flex items-center justify-center text-[var(--primary-500)]">
+              <Info className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[14px] font-700">Experimental Wireframes</span>
+              <span className="text-[12px] text-[var(--muted-foreground)]">Built with LoKey Design System • RBI Tokenized KYC Concept</span>
             </div>
           </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Audit Logs */}
-          <div className="lg:col-span-2">
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius-xl)] overflow-hidden h-full flex flex-col">
-              <div className="p-5 border-b border-[var(--border)] flex items-center justify-between shrink-0">
-                <h2 className="text-[16px] font-700">Audit Logs (Activity Trail)</h2>
-                <LoKeyButton variant="tertiary" size="xxs">Download Logs</LoKeyButton>
-              </div>
-              <div className="flex-1 overflow-x-auto">
-                <div className="min-w-[600px] lg:min-w-0 divide-y divide-[var(--border)]">
-                  {auditLogs.slice(0, 5).map((log) => (
-                    <div key={log.id} className="p-4 flex items-center gap-4 hover:bg-[var(--muted)]/30 transition-colors">
-                      <div className="w-10 h-10 rounded-full bg-[var(--color-success-700)]/5 flex items-center justify-center text-[var(--color-success-700)] shrink-0">
-                        <ShieldCheck className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-700 text-[var(--neutral-900)] truncate uppercase tracking-tight">{log.action}</p>
-                        <p className="text-[12px] text-[var(--muted-foreground)] truncate">{log.details}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-[12px] font-600 text-[var(--neutral-900)] mb-0.5">{log.time}</p>
-                        <div className="flex items-center justify-end gap-1 px-2 py-0.5 bg-[var(--color-success-700)]/10 rounded-full">
-                          <span className="text-[9px] font-700 text-[var(--color-success-700)] uppercase">{log.status}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Pending Actions */}
-          <div className="lg:col-span-1">
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius-xl)] overflow-hidden h-full">
-              <div className="p-5 border-b border-[var(--border)]">
-                <h2 className="text-[16px] font-700">Pending Actions</h2>
-              </div>
-              <div className="p-5">
-                {pendingKyc && !verified ? (
-                  <div className="p-4 rounded-[var(--radius-lg)] border border-[var(--amber-500)] bg-[var(--amber-500)]/5 flex flex-col gap-4 text-center">
-                    <div className="w-12 h-12 rounded-full bg-[var(--amber-500)] flex items-center justify-center text-white mx-auto">
-                      <Clock className="w-6 h-6" />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[14px] font-700">Video KYC Pending</span>
-                      <p className="text-[12px] text-[var(--muted-foreground)]">Complete VKYC to unlock credentials.</p>
-                    </div>
-                    <LoKeyButton variant="primary" size="s" className="bg-[var(--amber-600)] border-none w-full" onClick={() => window.location.href = "/create-vc"}>
-                      Complete Now
-                    </LoKeyButton>
-                  </div>
-                ) : (
-                  <div className="py-8 text-center flex flex-col items-center gap-3 opacity-60">
-                    <ShieldCheck className="w-10 h-10 md:w-12 md:h-12 text-[var(--color-success-700)]" />
-                    <p className="text-[12px] text-[var(--muted-foreground)]">No pending tasks.</p>
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => window.open('/walkthrough.md', '_blank')}
+              className="text-[13px] font-700 text-[var(--primary-500)] hover:underline"
+            >
+              View Walkthrough
+            </button>
+            <div className="w-px h-4 bg-[var(--border)]"></div>
+            <span className="text-[12px] font-600 text-[var(--muted-foreground)]">v1.2.0 (Responsive Build)</span>
           </div>
         </div>
-      </main>
-    </Layout>
+      </div>
+    </div>
   );
 }
+
+const Info = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />
+  </svg>
+);

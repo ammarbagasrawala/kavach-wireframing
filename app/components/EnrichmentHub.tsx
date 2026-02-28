@@ -49,7 +49,7 @@ export const EnrichmentHub: React.FC<EnrichmentHubProps> = ({ onNext, standalone
             const logs = JSON.parse(localStorage.getItem("kavach_audit_logs") || "[]");
             const docName = docs.find(d => d.id === id)?.name;
             logs.unshift({
-                id: Date.now(),
+                id: `enrich-${Date.now()}-${Math.random()}`,
                 action: "Document Linked",
                 details: `${docName} fetched from DigiLocker`,
                 time: "Just Now",

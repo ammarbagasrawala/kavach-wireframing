@@ -43,7 +43,7 @@ export default function CredentialsPage() {
             // Audit log for access
             const logs = JSON.parse(localStorage.getItem("kavach_audit_logs") || "[]");
             logs.unshift({
-                id: Date.now(),
+                id: `auth-${Date.now()}-${Math.random()}`,
                 action: "Vault Unlocked",
                 details: "Secure access via Biometric Authentication",
                 time: "Just Now",

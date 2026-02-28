@@ -82,12 +82,12 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage = "Dashboard", pr
     }, [currentPage]);
 
     const navItems = [
-        { label: "Dashboard", icon: LayoutDashboard, href: "/" },
+        { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
         { label: "Requests", icon: History, href: "/requests", badge: requestCount },
         { label: "Add Documents", icon: UserRoundCheck, href: "/add-documents" },
         { label: "My Credentials", icon: ShieldCheck, href: "/credentials" },
         { label: "Audit Logs", icon: Clock, href: "/audit-logs" },
-        { label: "Navigator", icon: Layers, href: "/navigator" },
+        { label: "Navigator", icon: Layers, href: "/" },
     ];
 
     const bottomNavItems = [

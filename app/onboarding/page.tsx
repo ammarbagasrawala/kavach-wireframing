@@ -44,106 +44,349 @@ const LanguageSelection = ({ selectedLang, onSelect, onContinue }: any) => (
 const AuthGateway = ({ onDigiLocker, onAssisted }: any) => (
     <div className="flex flex-col h-full gap-6">
         <div className="flex flex-col gap-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--primary-500)_12%,transparent)] flex items-center justify-center text-[var(--primary-500)]"><ShieldCheck className="w-6 h-6 md:w-8 md:h-8" /></div>
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--primary-500)_12%,transparent)] flex items-center justify-center text-[var(--primary-500)] shadow-sm">
+                <ShieldCheck className="w-6 h-6 md:w-7 md:h-7" />
+            </div>
             <h2 className="text-[20px] md:text-[24px] font-800 leading-tight tracking-tight">Secure Login</h2>
-            <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed">Choose your preferred way to register your identity with Kavach.</p>
+            <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed">
+                Choose how you'd like to sign in. We've made it simple and safe for everyone.
+            </p>
         </div>
         <div className="flex flex-col gap-4">
-            <button onClick={onDigiLocker} className="p-5 rounded-[var(--radius-xl)] border-2 border-[var(--primary-500)] bg-[color-mix(in_srgb,var(--primary-500)_4%,transparent)] text-left hover:scale-[1.01] transition-transform shadow-elevation-sm"><span className="text-[16px] md:text-[18px] font-800 block text-[var(--primary-500)] text-center sm:text-left uppercase tracking-tight">Continue with DigiLocker</span></button>
-            <button onClick={onAssisted} className="p-5 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--card)] text-left hover:bg-[var(--muted)]/50 transition-colors"><span className="text-[14px] md:text-[16px] font-700 block text-center sm:text-left text-[var(--muted-foreground)]">Assisted Registration</span></button>
+            <button
+                onClick={onDigiLocker}
+                className="group p-5 rounded-[var(--radius-xl)] border-2 border-[var(--primary-500)] bg-white text-left hover:bg-[color-mix(in_srgb,var(--primary-500)_4%,transparent)] transition-all shadow-elevation-sm relative overflow-hidden"
+            >
+                <div className="flex flex-col gap-1 relative z-10">
+                    <span className="text-[16px] md:text-[18px] font-800 text-[var(--primary-500)] uppercase tracking-tight flex items-center gap-2">
+                        I have a DigiLocker
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                    <span className="text-[12px] text-[var(--muted-foreground)] font-500 italic">Recommended for faster setup</span>
+                </div>
+                <div className="absolute top-0 right-0 h-full w-24 bg-gradient-to-l from-[var(--primary-500)]/5 to-transparent skew-x-12 translate-x-12"></div>
+            </button>
+
+            <button
+                onClick={onAssisted}
+                className="p-5 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--card)] text-left hover:bg-[var(--muted)]/50 transition-colors flex flex-col gap-1"
+            >
+                <span className="text-[15px] md:text-[16px] font-700 text-[var(--neutral-900)]">I need help setting up</span>
+                <span className="text-[12px] text-[var(--muted-foreground)]">Step-by-step guide for DigiLocker</span>
+            </button>
+        </div>
+
+        <div className="mt-auto p-4 bg-[var(--muted)]/30 rounded-[var(--radius-lg)] border border-[var(--border)] flex gap-3">
+            <Info className="w-5 h-5 text-[var(--primary-500)] shrink-0" />
+            <p className="text-[11px] text-[var(--muted-foreground)] leading-normal">
+                <strong>Accessibility Note:</strong> If you need assistance, you can enable Audio Mode at the top right of the screen at any time.
+            </p>
         </div>
     </div>
 );
 
 const AssistedSetup = ({ onBack, onComplete }: any) => (
-    <div className="flex flex-col h-full gap-6">
-        <LoKeyButton variant="ghost" size="xs" onClick={onBack} leftIcon={<ChevronLeft />}>Back</LoKeyButton>
-        <h2 className="text-[24px] font-700">Create DigiLocker</h2>
-        <div className="flex flex-col gap-3">
-            <div className="p-4 rounded-[var(--radius-md)] border border-[var(--primary-500)] bg-[color-mix(in_srgb,var(--primary-500)_4%,transparent)] flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-[var(--primary-500)] text-white flex items-center justify-center"><FileText className="w-5 h-5" /></div>
-                <span className="text-[14px] font-700">1. Enter Aadhaar</span>
-            </div>
+    <div className="flex flex-col h-full gap-6 overflow-y-auto pr-1">
+        <LoKeyButton variant="ghost" size="xs" onClick={onBack} leftIcon={<ChevronLeft className="w-4 h-4" />} className="-ml-2">
+            Back to Login
+        </LoKeyButton>
+
+        <div className="flex flex-col gap-2">
+            <h2 className="text-[22px] md:text-[26px] font-800 leading-tight tracking-tight">Creating your Digital Identity</h2>
+            <p className="text-[14px] text-[var(--muted-foreground)]">Follow these 3 simple steps to get started with DigiLocker.</p>
         </div>
-        <LoKeyButton variant="primary" className="w-full mt-auto" size="l" onClick={onComplete} rightIcon={<ArrowRight />}>Complete Registration</LoKeyButton>
+
+        <div className="flex flex-col gap-4">
+            {[
+                { step: "1", title: "Signup with Mobile", desc: "Enter your mobile number on the DigiLocker portal.", icon: Smartphone },
+                { step: "2", title: "Link Aadhaar", desc: "For security, link your 12-digit Aadhaar number.", icon: FileText },
+                { step: "3", title: "Set Security PIN", desc: "Create a 6-digit PIN to keep your documents safe.", icon: Key },
+            ].map((item, i) => (
+                <div key={i} className="flex gap-4 p-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white shadow-sm ring-1 ring-black/5">
+                    <div className="w-10 h-10 rounded-full bg-[var(--primary-500)] flex items-center justify-center text-white font-900 text-[18px] shrink-0">
+                        {item.step}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[15px] font-700">{item.title}</span>
+                        <p className="text-[12px] text-[var(--muted-foreground)] leading-snug">{item.desc}</p>
+                    </div>
+                </div>
+            ))}
+        </div>
+
+        <div className="mt-4 p-4 rounded-[var(--radius-lg)] bg-blue-50 border border-blue-200 flex gap-3">
+            <HelpCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-[12px] text-blue-700 leading-normal italic">
+                You can do this at any Sahaj Kendra or Aadhaar Center if you need physical assistance.
+            </p>
+        </div>
+
+        <LoKeyButton variant="primary" className="w-full mt-auto py-6" size="xxl" onClick={onComplete} rightIcon={<ArrowRight className="w-5 h-5" />}>
+            Open DigiLocker Setup
+        </LoKeyButton>
     </div>
 );
 
-const BiometricBinding = ({ onComplete }: any) => {
-    const [isBinding, setIsBinding] = useState(false);
-
-    useEffect(() => {
-        if (isBinding) {
-            const timer = setTimeout(() => onComplete(), 2000);
-            return () => clearTimeout(timer);
-        }
-    }, [isBinding]);
-
+const PhoneInput = ({ onNext }: any) => {
+    const [phone, setPhone] = useState("");
     return (
         <div className="flex flex-col h-full gap-6">
             <div className="flex flex-col gap-2">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--color-success-700)_12%,transparent)] flex items-center justify-center text-[var(--color-success-700)]">
-                    <LockIcon className="w-6 h-6 md:w-7 md:h-7" />
+                <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--primary-500)_12%,transparent)] flex items-center justify-center text-[var(--primary-500)]">
+                    <Smartphone className="w-6 h-6" />
                 </div>
-                <h2 className="text-[20px] md:text-[24px] font-800 leading-tight tracking-tight">Secure Device</h2>
+                <h2 className="text-[20px] md:text-[24px] font-800 leading-tight tracking-tight">Verify Mobile</h2>
                 <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed">
-                    Bind your identity to this device hardware for maximum security.
+                    Enter the mobile number linked to your DigiLocker or Aadhaar.
                 </p>
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8">
+            <div className="flex flex-col gap-2">
+                <label className="text-[12px] font-800 uppercase tracking-widest text-[var(--muted-foreground)]">Mobile Number</label>
                 <div className="relative">
-                    {/* Pulsing rings animation placeholder */}
-                    <div className="absolute inset-0 m-auto w-32 h-32 rounded-full bg-[var(--primary-500)]/10 animate-ping"></div>
-                    <div className="absolute inset-0 m-auto w-24 h-24 rounded-full bg-[var(--primary-500)]/20 animate-pulse"></div>
-
-                    <div className="relative w-24 h-24 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-elevation-md flex items-center justify-center z-10">
-                        {isBinding ? (
-                            <Fingerprint className="w-12 h-12 text-[var(--primary-500)] animate-pulse" />
-                        ) : (
-                            <ScanFace className="w-12 h-12 text-[var(--primary-500)]" />
-                        )}
-                    </div>
-                </div>
-
-                <div className="flex flex-col gap-4 w-full">
-                    <div className="flex items-start gap-3 p-4 rounded-[var(--radius-md)] bg-[var(--background)] border border-[var(--border)]">
-                        <Cpu className="w-5 h-5 text-[var(--primary-500)] shrink-0 mt-0.5" />
-                        <div className="flex flex-col gap-0.5">
-                            <span className="text-[13px] font-700">Hardware Level Protection</span>
-                            <p className="text-[11px] text-[var(--muted-foreground)] leading-snug">
-                                Your private keys will be stored in the Secure Enclave of this {navigator.platform.includes('Mac') ? 'Mac' : 'Phone'}.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-start gap-3 p-4 rounded-[var(--radius-md)] bg-[var(--background)] border border-[var(--border)]">
-                        <Fingerprint className="w-5 h-5 text-[var(--primary-500)] shrink-0 mt-0.5" />
-                        <div className="flex flex-col gap-0.5">
-                            <span className="text-[13px] font-700">Biometric Authentication</span>
-                            <p className="text-[11px] text-[var(--muted-foreground)] leading-snug">
-                                Every time you share your identity, we'll verify it's you with FaceID or TouchID.
-                            </p>
-                        </div>
-                    </div>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[16px] font-700 text-[var(--muted-foreground)]">+91</span>
+                    <input
+                        type="tel"
+                        placeholder="00000 00000"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        className="w-full pl-14 pr-4 py-4 rounded-[var(--radius-lg)] border-2 border-[var(--border)] focus:border-[var(--primary-500)] outline-none text-[18px] font-700 tracking-[0.1em] transition-all"
+                    />
                 </div>
             </div>
 
-            <div className="mt-auto pt-4 border-t border-[var(--border)] flex flex-col gap-3">
+            <div className="mt-auto flex flex-col gap-3">
                 <LoKeyButton
                     variant="primary"
                     className="w-full"
                     size="xxl"
-                    onClick={() => setIsBinding(true)}
-                    disabled={isBinding}
-                    leftIcon={isBinding ? null : <Fingerprint className="w-5 h-5" />}
+                    disabled={phone.length < 10}
+                    onClick={() => onNext(phone)}
                 >
-                    {isBinding ? "Securing device..." : "Enable Biometrics"}
+                    Get OTP
                 </LoKeyButton>
-                <LoKeyButton variant="ghost" size="m" className="text-[var(--muted-foreground)]">
-                    Maybe later (use PIN)
+                <p className="text-[11px] text-center text-[var(--muted-foreground)] px-6">
+                    By continuing, you agree to receive a secure verification code via SMS.
+                </p>
+            </div>
+        </div>
+    );
+};
+
+const OTPVerify = ({ phone, onNext, onResend }: any) => {
+    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+
+    const handleChange = (val: string, index: number) => {
+        if (val.length > 1) val = val.slice(-1);
+        const newOtp = [...otp];
+        newOtp[index] = val;
+        setOtp(newOtp);
+
+        if (val && index < 5) {
+            const next = document.getElementById(`otp-${index + 1}`);
+            next?.focus();
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full gap-6">
+            <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--primary-500)_12%,transparent)] flex items-center justify-center text-[var(--primary-500)]">
+                    <ShieldCheck className="w-6 h-6" />
+                </div>
+                <h2 className="text-[20px] md:text-[24px] font-800 leading-tight tracking-tight">Enter OTP</h2>
+                <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed">
+                    We've sent a 6-digit code to <span className="font-700 text-[var(--neutral-900)]">+91 {phone.slice(0, 3)}...{phone.slice(-3)}</span>
+                </p>
+            </div>
+
+            <div className="flex justify-between gap-2 py-4">
+                {otp.map((digit, i) => (
+                    <input
+                        key={i}
+                        id={`otp-${i}`}
+                        type="text"
+                        inputMode="numeric"
+                        value={digit}
+                        onChange={(e) => handleChange(e.target.value.replace(/\D/g, ''), i)}
+                        className="w-10 h-14 md:w-12 md:h-16 text-center text-[24px] font-800 border-2 border-[var(--border)] rounded-[var(--radius-md)] focus:border-[var(--primary-500)] focus:ring-4 focus:ring-[var(--primary-500)]/10 outline-none transition-all"
+                    />
+                ))}
+            </div>
+
+            <div className="mt-auto flex flex-col gap-4">
+                <button onClick={onResend} className="text-[13px] font-700 text-[var(--primary-500)] hover:underline mx-auto">
+                    Didn't receive code? Resend
+                </button>
+                <LoKeyButton
+                    variant="primary"
+                    className="w-full"
+                    size="xxl"
+                    disabled={otp.some(d => !d)}
+                    onClick={onNext}
+                >
+                    Verify & Continue
                 </LoKeyButton>
             </div>
+        </div>
+    );
+};
+
+const OAuthSimulation = ({ onComplete }: any) => {
+    const [status, setStatus] = useState("connecting");
+
+    useEffect(() => {
+        const t1 = setTimeout(() => setStatus("authorizing"), 1500);
+        const t2 = setTimeout(() => setStatus("success"), 3000);
+        const t3 = setTimeout(() => onComplete(), 4500);
+        return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    }, []);
+
+    return (
+        <div className="flex flex-col items-center justify-center h-full text-center gap-8 py-8">
+            <div className="relative w-28 h-28">
+                <div className="absolute inset-0 rounded-full border-4 border-[var(--border)] border-dashed animate-[spin_10s_linear_infinite]"></div>
+                <div className={cn(
+                    "absolute inset-0 rounded-full border-4 border-t-[var(--primary-500)] transition-all duration-500",
+                    status === "success" ? "border-[var(--color-success-700)] rotate-0" : "animate-spin"
+                )}></div>
+                <div className="absolute inset-0 m-auto w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center border border-[var(--border)]">
+                    <img src="/logo.png" alt="Kavach" className="w-10 h-10 object-contain" />
+                </div>
+                {status === "success" && (
+                    <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-[var(--color-success-700)] rounded-full flex items-center justify-center text-white shadow-lg animate-in zoom-in duration-300">
+                        <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                )}
+            </div>
+
+            <div className="flex flex-col gap-2 max-w-[240px]">
+                <p className="text-[18px] font-800 uppercase tracking-tight">
+                    {status === "connecting" && "Connecting..."}
+                    {status === "authorizing" && "Authorizing Kavach"}
+                    {status === "success" && "Access Granted"}
+                </p>
+                <p className="text-[13px] text-[var(--muted-foreground)] leading-relaxed">
+                    {status === "connecting" && "Establishing secure tunnel to DigiLocker servers."}
+                    {status === "authorizing" && "Approving identity request via OAuth 2.0 protocol."}
+                    {status === "success" && "Secure connection established successfully!"}
+                </p>
+            </div>
+
+            <div className="flex gap-4 opacity-40 grayscale pointer-events-none">
+                <div className="px-3 py-1 rounded bg-[var(--muted)] border border-[var(--border)] text-[10px] font-800 uppercase">SSL 256-bit</div>
+                <div className="px-3 py-1 rounded bg-[var(--muted)] border border-[var(--border)] text-[10px] font-800 uppercase">OAuth 2.0</div>
+            </div>
+        </div>
+    );
+};
+
+const UnifiedSecuritySetup = ({ onComplete }: any) => {
+    const [step, setStep] = useState(1); // 1: Biometric, 2: PIN
+    const [pin, setPin] = useState(["", "", "", "", "", ""]);
+    const [isBinding, setIsBinding] = useState(false);
+
+    const handleBiometric = () => {
+        setIsBinding(true);
+        setTimeout(() => {
+            setIsBinding(false);
+            setStep(2);
+        }, 2000);
+    };
+
+    const handlePinChange = (val: string, index: number) => {
+        if (val.length > 1) val = val.slice(-1);
+        const newPin = [...pin];
+        newPin[index] = val;
+        setPin(newPin);
+
+        if (val && index < 5) {
+            const next = document.getElementById(`pin-${index + 1}`);
+            next?.focus();
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full gap-6">
+            <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--color-success-700)_12%,transparent)] flex items-center justify-center text-[var(--color-success-700)] shadow-sm">
+                    <LockIcon className="w-6 h-6" />
+                </div>
+                <h2 className="text-[20px] md:text-[24px] font-800 leading-tight tracking-tight">Set Security</h2>
+                <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed">
+                    {step === 1 ? "Protect your identity using your device's secure hardware." : "Create a 6-digit PIN as a backup for your biometrics."}
+                </p>
+            </div>
+
+            {step === 1 ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-10 py-8">
+                    <div className="relative">
+                        <div className="absolute inset-0 m-auto w-32 h-32 rounded-full bg-[var(--primary-500)]/10 animate-ping"></div>
+                        <div className="absolute inset-0 m-auto w-24 h-24 rounded-full bg-[var(--primary-500)]/20 animate-pulse"></div>
+
+                        <div className="relative w-24 h-24 rounded-3xl bg-white border border-[var(--border)] shadow-elevation-md flex items-center justify-center z-10 transition-transform hover:scale-105 active:scale-95 cursor-pointer" onClick={handleBiometric}>
+                            {isBinding ? (
+                                <Fingerprint className="w-12 h-12 text-[var(--primary-500)] animate-pulse" />
+                            ) : (
+                                <ScanFace className="w-12 h-12 text-[var(--primary-500)]" />
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4 w-full">
+                        <div className="flex items-start gap-3 p-4 rounded-[var(--radius-lg)] bg-white border border-[var(--border)] shadow-sm">
+                            <Cpu className="w-5 h-5 text-[var(--primary-500)] shrink-0 mt-0.5" />
+                            <div className="flex flex-col gap-0.5">
+                                <span className="text-[13px] font-700 uppercase tracking-tight">Hardware Protection</span>
+                                <p className="text-[11px] text-[var(--muted-foreground)] leading-snug italic">
+                                    Keys stored in Secure Enclave. Only you can access them.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <LoKeyButton
+                        variant="primary"
+                        className="w-full mt-auto"
+                        size="xxl"
+                        onClick={handleBiometric}
+                        disabled={isBinding}
+                    >
+                        {isBinding ? "Registering Biometrics..." : "Enable Face / Touch ID"}
+                    </LoKeyButton>
+                </div>
+            ) : (
+                <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8 animate-in slide-in-from-right-4 duration-500">
+                    <div className="flex justify-between gap-2 w-full max-w-[300px]">
+                        {pin.map((digit, i) => (
+                            <input
+                                key={i}
+                                id={`pin-${i}`}
+                                type="password"
+                                inputMode="numeric"
+                                value={digit}
+                                onChange={(e) => handlePinChange(e.target.value.replace(/\D/g, ''), i)}
+                                className="w-10 h-14 text-center text-[24px] font-800 border-2 border-[var(--border)] rounded-[var(--radius-md)] focus:border-[var(--primary-500)] outline-none bg-[var(--muted)]/20"
+                            />
+                        ))}
+                    </div>
+
+                    <div className="mt-auto flex flex-col gap-3 w-full">
+                        <LoKeyButton
+                            variant="primary"
+                            className="w-full"
+                            size="xxl"
+                            disabled={pin.some(d => !d)}
+                            onClick={onComplete}
+                        >
+                            Complete Setup
+                        </LoKeyButton>
+                        <p className="text-[11px] text-center text-[var(--muted-foreground)] px-4">
+                            Try to choose a PIN that isn't easy to guess (like 123456).
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -154,67 +397,134 @@ export default function OnboardingPage() {
     const [currentStep, setCurrentStep] = useState(0);
     const [selectedLang, setSelectedLang] = useState("en");
     const [audioEnabled, setAudioEnabled] = useState(false);
+    const [phone, setPhone] = useState("");
+
+    // Step Map:
+    // 0: Splash
+    // 1: Language
+    // 2: Auth Gateway
+    // 3: Assisted Setup
+    // 4: Phone Input
+    // 5: OTP Verify
+    // 6: OAuth Simulation
+    // 7: Security Setup
+    // 8: Success
 
     if (currentStep === 0) {
         return (
-            <div className="min-h-screen bg-[var(--neutral-900)] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-700">
-                <div className="mb-8">
-                    <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-[var(--radius-xl)] flex items-center justify-center mx-auto shadow-xl shadow-white/5 animate-pulse overflow-hidden">
-                        <img src="/logo.png" alt="Kavach Logo" className="w-full h-auto object-contain" />
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-1000">
+                <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+                    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[var(--primary-500)]/5 blur-[120px] rounded-full"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full"></div>
+                </div>
+
+                <div className="mb-10 relative">
+                    <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-[var(--radius-xl)] flex items-center justify-center mx-auto shadow-2xl shadow-black/5 overflow-hidden animate-in zoom-in duration-1000 delay-300">
+                        <img src="/logo.png" alt="Kavach Logo" className="w-full h-auto object-contain p-4" />
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[var(--primary-500)] rounded-full flex items-center justify-center text-white shadow-lg animate-bounce">
+                        <ShieldCheck className="w-4 h-4" />
                     </div>
                 </div>
-                <h1 className="text-[28px] md:text-[36px] font-800 text-white mb-2 tracking-tighter uppercase">KAVACH</h1>
-                <p className="text-[16px] md:text-[18px] text-[color-mix(in_srgb,var(--neutral-0)_70%,transparent)] mb-12 max-w-[280px] md:max-w-xs leading-tight font-500">
-                    India's First Truly User-Held Tokenised KYC
-                </p>
-                <div className="flex flex-col gap-4 w-full max-w-[280px]">
-                    <LoKeyButton variant="primary" size="xxl" onClick={() => setCurrentStep(1)} className="w-full text-[16px] md:text-[18px] font-800 uppercase tracking-widest shadow-2xl" rightIcon={<ArrowRight className="w-5 h-5" />}>
+
+                <div className="flex flex-col gap-3 mb-12 max-w-sm mx-auto">
+                    <h1 className="text-[32px] md:text-[42px] font-900 text-[var(--neutral-900)] tracking-tighter leading-none">
+                        KAVACH
+                    </h1>
+                    <div className="h-1 w-12 bg-[var(--primary-500)] mx-auto rounded-full"></div>
+                    <p className="text-[18px] md:text-[20px] font-700 text-[var(--neutral-800)] leading-tight mt-2">
+                        Your Right to Identity, <span className="text-[var(--primary-500)]">with Ease.</span>
+                    </p>
+                    <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed mt-1">
+                        India's first secure, user-held identity platform.
+                        Simple for Everyone. Secure for India.
+                    </p>
+                </div>
+
+                <div className="flex flex-col gap-4 w-full max-w-[320px]">
+                    <LoKeyButton
+                        variant="primary"
+                        size="xxl"
+                        onClick={() => setCurrentStep(1)}
+                        className="w-full text-[16px] font-800 uppercase tracking-widest shadow-xl group"
+                        rightIcon={<ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+                    >
                         Get Started
                     </LoKeyButton>
+
+                    <div className="flex items-center justify-center gap-6 mt-4 opacity-60">
+                        <div className="flex flex-col items-center gap-1">
+                            <Smartphone className="w-4 h-4" />
+                            <span className="text-[10px] font-700 uppercase">Mobile First</span>
+                        </div>
+                        <div className="w-px h-6 bg-[var(--border)]"></div>
+                        <div className="flex flex-col items-center gap-1">
+                            <Languages className="w-4 h-4" />
+                            <span className="text-[10px] font-700 uppercase">12+ Languages</span>
+                        </div>
+                        <div className="w-px h-6 bg-[var(--border)]"></div>
+                        <div className="flex flex-col items-center gap-1">
+                            <Info className="w-4 h-4" />
+                            <span className="text-[10px] font-700 uppercase">Inclusive</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <OnboardingLayout step={currentStep} totalSteps={5} audioEnabled={audioEnabled} onAudioToggle={setAudioEnabled}>
+        <OnboardingLayout step={currentStep > 3 ? currentStep - 1 : currentStep} totalSteps={7} audioEnabled={audioEnabled} onAudioToggle={setAudioEnabled}>
             {currentStep === 1 && <LanguageSelection selectedLang={selectedLang} onSelect={setSelectedLang} onContinue={() => setCurrentStep(2)} />}
             {currentStep === 2 && <AuthGateway onDigiLocker={() => setCurrentStep(4)} onAssisted={() => setCurrentStep(3)} />}
-            {currentStep === 3 && <AssistedSetup onBack={() => setCurrentStep(2)} onComplete={() => setCurrentStep(4)} />}
-            {currentStep === 4 && (
-                <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-12">
-                    <div className="relative w-24 h-24">
-                        <div className="absolute inset-0 rounded-full border-4 border-[var(--border)]"></div>
-                        <div className="absolute inset-0 rounded-full border-4 border-t-[var(--primary-500)] animate-spin"></div>
-                        <ShieldCheck className="absolute inset-0 m-auto w-10 h-10 text-[var(--primary-500)]" />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <p className="text-[18px] font-700">Verifying Identity</p>
-                        <p className="text-[14px] text-[var(--muted-foreground)] px-8">Securely connecting with government registries via DigiLocker.</p>
-                    </div>
-                    <LoKeyButton variant="primary" size="s" className="mt-4" onClick={() => setCurrentStep(5)}>Continue</LoKeyButton>
-                </div>
-            )}
-            {currentStep === 5 && <BiometricBinding onComplete={() => setCurrentStep(6)} />}
-            {currentStep === 6 && (
-                <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-12 animate-in fade-in zoom-in duration-500">
-                    <div className="w-20 h-20 rounded-full bg-[var(--color-success-700)] flex items-center justify-center text-white shadow-lg shadow-[var(--color-success-700)]/20">
+            {currentStep === 3 && <AssistedSetup onBack={() => setCurrentStep(2)} onComplete={() => window.open('https://www.digilocker.gov.in/', '_blank')} />}
+
+            {currentStep === 4 && <PhoneInput onNext={(p: string) => { setPhone(p); setCurrentStep(5); }} />}
+            {currentStep === 5 && <OTPVerify phone={phone} onNext={() => setCurrentStep(6)} onResend={() => alert("OTP Resent!")} />}
+            {currentStep === 6 && <OAuthSimulation onComplete={() => setCurrentStep(7)} />}
+            {currentStep === 7 && <UnifiedSecuritySetup onComplete={() => setCurrentStep(8)} />}
+
+            {currentStep === 8 && (
+                <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-6 animate-in fade-in zoom-in duration-500">
+                    <div className="w-20 h-20 rounded-full bg-[var(--color-success-700)] flex items-center justify-center text-white shadow-lg shadow-[var(--color-success-700)]/20 animate-bounce">
                         <CheckCircle2 className="w-12 h-12" />
                     </div>
                     <div className="flex flex-col gap-2">
-                        <h2 className="text-[24px] md:text-[28px] font-800 tracking-tight">You're all set!</h2>
-                        <p className="text-[15px] md:text-[16px] text-[var(--muted-foreground)] px-4">Your Kavach identity is ready and secured.</p>
+                        <h2 className="text-[24px] md:text-[28px] font-900 tracking-tight text-[var(--neutral-900)] uppercase">Identity Secured</h2>
+                        <p className="text-[15px] md:text-[16px] text-[var(--muted-foreground)] px-4 leading-relaxed">
+                            Congratulations! Your Kavach profile is ready. You now have full control over your digital identity.
+                        </p>
                     </div>
-                    <div className="p-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--background)] flex items-center gap-4 w-full">
-                        <div className="w-10 h-10 rounded-[var(--radius-md)] bg-white border border-[var(--border)] flex items-center justify-center text-[var(--primary-500)]">
-                            <Key className="w-5 h-5" />
+
+                    <div className="w-full flex flex-col gap-3">
+                        <div className="p-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white flex items-center gap-4 w-full shadow-sm">
+                            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--primary-500)] text-white flex items-center justify-center shadow-md">
+                                <Key className="w-5 h-5" />
+                            </div>
+                            <div className="text-left flex flex-col min-w-0">
+                                <span className="text-[10px] font-800 uppercase text-[var(--muted-foreground)] tracking-widest">Digital ID (DID)</span>
+                                <span className="text-[13px] font-700 font-mono truncate">did:kavach:982fd8...7a4x9</span>
+                            </div>
                         </div>
-                        <div className="text-left flex flex-col">
-                            <span className="text-[12px] font-700 uppercase text-[var(--muted-foreground)]">Your DID</span>
-                            <span className="text-[13px] font-600 font-mono">did:kavach:982...7a4</span>
+
+                        <div className="p-4 rounded-[var(--radius-lg)] border border-[var(--color-success-700)]/30 bg-[var(--color-success-700)]/5 flex items-center gap-3">
+                            <ShieldCheck className="w-5 h-5 text-[var(--color-success-700)] shrink-0" />
+                            <p className="text-[11px] text-[var(--color-success-700)] font-700 text-left leading-tight">
+                                Validated via DigiLocker Trust Network. Ready for Verifiable Credential issuance.
+                            </p>
                         </div>
                     </div>
-                    <LoKeyButton variant="primary" className="w-full mt-4" size="xl" onClick={() => window.location.href = "/"}>
+
+                    <LoKeyButton
+                        variant="primary"
+                        className="w-full mt-2 py-6"
+                        size="xxl"
+                        onClick={() => {
+                            localStorage.setItem("kavach_identity_verified", "false"); // Still need VKYC for full verify
+                            window.location.href = "/dashboard";
+                        }}
+                        rightIcon={<ArrowRight className="w-5 h-5" />}
+                    >
                         Go to Dashboard
                     </LoKeyButton>
                 </div>

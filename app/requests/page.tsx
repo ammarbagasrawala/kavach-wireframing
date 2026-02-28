@@ -83,7 +83,7 @@ export default function RequestsPage() {
             const targetReq = requests.find(r => r.id === id);
 
             logs.unshift({
-                id: Date.now(),
+                id: `req-act-${Date.now()}-${Math.random()}`,
                 action: action === "granted" ? "KYC Data Shared" : "KYC Request Rejected",
                 details: `${action === "granted" ? "Tokenized KYC package" : "Data request"} for ${targetReq?.purpose} shared with ${targetReq?.org}`,
                 time: "Just Now",

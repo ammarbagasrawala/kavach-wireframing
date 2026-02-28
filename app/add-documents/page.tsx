@@ -16,7 +16,7 @@ export default function AddDocumentsPage() {
                 <div className="max-w-2xl mx-auto bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius-xl)] p-6 md:p-8 shadow-elevation-sm">
                     <EnrichmentHub
                         standalone={true}
-                        onNext={() => window.location.href = "/"}
+                        onNext={() => window.location.href = "/dashboard"}
                     />
                 </div>
             </main>
