@@ -36,6 +36,7 @@ export default function DashboardPage() {
     const [vkycDate, setVkycDate] = useState<string | null>(null);
     const [showVkycModal, setShowVkycModal] = useState(false);
     const [vkycStep, setVkycStep] = useState<"prompt" | "connecting" | "success">("prompt");
+    const [kavachId, setKavachId] = useState<string | null>(null);
 
     useEffect(() => {
         const isPending = localStorage.getItem("kavach_pending_kyc") === "true";
@@ -48,6 +49,9 @@ export default function DashboardPage() {
 
         const date = localStorage.getItem("kavach_vkyc_date");
         setVkycDate(date);
+
+        const id = localStorage.getItem("kavach_user_id");
+        setKavachId(id || "ammar@kavach"); // Fallback for wireframe
 
         const logs = localStorage.getItem("kavach_audit_logs");
         if (logs) {
@@ -76,7 +80,17 @@ export default function DashboardPage() {
                 title="Dashboard"
                 breadcrumbs={[{ label: "Kavach" }, { label: "Dashboard" }]}
                 actions={
-                    <>
+                    <div className="flex items-center gap-4">
+                        <div className="hidden md:flex flex-col items-end mr-2">
+                            <span className="text-[10px] font-800 uppercase text-[var(--muted-foreground)] tracking-widest leading-none mb-1">Discovery ID</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[14px] font-900 text-[var(--primary-500)]">{kavachId}</span>
+                                <div className="w-4 h-4 rounded-full bg-[var(--primary-500)] flex items-center justify-center text-white">
+                                    <ShieldCheck className="w-2.5 h-2.5" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="h-8 w-px bg-[var(--border)] hidden md:block"></div>
                         <LoKeyButton variant="tertiary" size="s" leftIcon={<Filter className="w-4 h-4" />}>
                             Filter
                         </LoKeyButton>
@@ -96,7 +110,7 @@ export default function DashboardPage() {
                         >
                             {verified ? "Manage Credentials" : "Verify Identity"}
                         </LoKeyButton>
-                    </>
+                    </div>
                 }
             />
 

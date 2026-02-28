@@ -19,6 +19,8 @@ import {
     Fingerprint,
     Lock as LockIcon,
     ShieldCheck,
+    ShieldAlert,
+    Trash2,
     FileText,
     EyeOff,
     Eye,
@@ -36,8 +38,11 @@ export default function CredentialsPage() {
     const [fetchedDocs, setFetchedDocs] = useState<string[]>([]);
     const [issuedDocs, setIssuedDocs] = useState<string[]>(["aadhaar", "pan", "ckycr"]); // Default
     const [verified, setVerified] = useState(false);
+    const [kavachId, setKavachId] = useState<string>("ammar@kavach");
 
     useEffect(() => {
+        const id = localStorage.getItem("kavach_user_id");
+        if (id) setKavachId(id);
         const isVerified = localStorage.getItem("kavach_identity_verified") === "true";
         setVerified(isVerified);
 
@@ -47,6 +52,19 @@ export default function CredentialsPage() {
         const issued = localStorage.getItem("kavach_issued_docs");
         if (issued) setIssuedDocs(JSON.parse(issued));
     }, []);
+
+    const handleDelete = (id: string, isIssued: boolean) => {
+        if (isIssued) {
+            const newIssued = issuedDocs.filter(d => d !== id);
+            setIssuedDocs(newIssued);
+            localStorage.setItem("kavach_issued_docs", JSON.stringify(newIssued));
+        } else {
+            const newFetched = fetchedDocs.filter(d => d !== id);
+            setFetchedDocs(newFetched);
+            localStorage.setItem("kavach_fetched_docs", JSON.stringify(newFetched));
+        }
+        addAuditLog("Credential Deleted", `Secure removal of ${id === 'pan' ? 'PAN' : id.toUpperCase()} authorized and completed`, "Warning");
+    };
 
     const handleAuth = () => {
         setIsAuthenticating(true);
@@ -154,7 +172,35 @@ export default function CredentialsPage() {
             />
             <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[var(--background)]">
                 <div className="flex flex-col gap-8 max-w-4xl mx-auto">
-                    {/* Basic Identity Section */}
+                    {/* Kavach Identity Header Card */}
+                    <div className="bg-white border border-[var(--border)] rounded-[var(--radius-xl)] p-5 md:p-6 shadow-elevation-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[var(--primary-500)] to-[var(--primary-600)]"></div>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-[var(--radius-lg)] bg-[var(--primary-500)]/10 border border-[var(--primary-500)]/20 flex items-center justify-center text-[var(--primary-500)] shrink-0">
+                                    <ShieldCheck className="w-8 h-8" />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[14px] font-800 uppercase text-[var(--muted-foreground)] tracking-widest leading-none">Discovery ID</span>
+                                        <StatusChip status="completed" className="!px-1.5 !py-0 !h-4 !text-[9px]" />
+                                    </div>
+                                    <span className="text-[20px] md:text-[22px] font-900 text-[var(--neutral-900)] tracking-tight truncate">{kavachId}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 bg-[var(--muted)]/50 p-3 rounded-[var(--radius-lg)] border border-[var(--border)]">
+                                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[var(--muted-foreground)] shadow-sm">
+                                    <Fingerprint className="w-4 h-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-800 uppercase text-[var(--muted-foreground)] tracking-tighter">Vault Status</span>
+                                    <span className="text-[12px] font-700 text-[var(--neutral-900)]">Biometric Secured</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Core Identity Tokens */}
                     <div className="flex flex-col gap-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <h2 className="text-[14px] md:text-[16px] font-800 uppercase tracking-widest text-[var(--muted-foreground)] px-1">Core Identity Tokens</h2>
@@ -179,6 +225,7 @@ export default function CredentialsPage() {
                                     }}
                                     isExpanded={showPlain === "aadhaar"}
                                     onToggle={() => setShowPlain(showPlain === "aadhaar" ? null : "aadhaar")}
+                                    onDelete={() => handleDelete("aadhaar", true)}
                                     ttl="Valid until: 2034"
                                     txId="0x4a2b...f912"
                                     hash="sha256:e3b0c442...8b1a"
@@ -199,6 +246,7 @@ export default function CredentialsPage() {
                                     }}
                                     isExpanded={showPlain === "pan"}
                                     onToggle={() => setShowPlain(showPlain === "pan" ? null : "pan")}
+                                    onDelete={() => handleDelete("pan", true)}
                                     ttl="Permanent"
                                     txId="0x89c1...d045"
                                     hash="sha256:7f83b1...32c9"
@@ -219,6 +267,7 @@ export default function CredentialsPage() {
                                     }}
                                     isExpanded={showPlain === "passport"}
                                     onToggle={() => setShowPlain(showPlain === "passport" ? null : "passport")}
+                                    onDelete={() => handleDelete("passport", true)}
                                     ttl="Valid until: 2032"
                                     txId="0x2f91...e832"
                                     hash="sha256:8b2a...c011"
@@ -239,6 +288,7 @@ export default function CredentialsPage() {
                                     }}
                                     isExpanded={showPlain === "voter"}
                                     onToggle={() => setShowPlain(showPlain === "voter" ? null : "voter")}
+                                    onDelete={() => handleDelete("voter", true)}
                                     ttl="Valid until: 2039"
                                     txId="0x5c7a...d901"
                                     hash="sha256:ef32...b998"
@@ -259,6 +309,7 @@ export default function CredentialsPage() {
                                     }}
                                     isExpanded={showPlain === "ckycr"}
                                     onToggle={() => setShowPlain(showPlain === "ckycr" ? null : "ckycr")}
+                                    onDelete={() => handleDelete("ckycr", true)}
                                     ttl="Permanent"
                                     txId="0x9a2c...b112"
                                     hash="sha256:d1e2...f3g4"
@@ -286,6 +337,7 @@ export default function CredentialsPage() {
                                             data={doc.data}
                                             isExpanded={showPlain === docId}
                                             onToggle={() => setShowPlain(showPlain === docId ? null : docId)}
+                                            onDelete={() => handleDelete(docId, false)}
                                             ttl={doc.ttl || "Permanent"}
                                             txId={`0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`}
                                             hash={`sha256:${Math.random().toString(36).slice(2, 15)}...`}
@@ -335,6 +387,7 @@ function CredentialCard({
     data,
     isExpanded,
     onToggle,
+    onDelete,
     ttl,
     txId,
     hash,
@@ -343,6 +396,8 @@ function CredentialCard({
     const [showProof, setShowProof] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isAuthPending, setIsAuthPending] = useState(false);
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
     const [lastSynced, setLastSynced] = useState("Just Now");
 
@@ -430,6 +485,13 @@ function CredentialCard({
                                 title="Sync from Registry"
                             >
                                 <RefreshCw className="w-3.5 h-3.5 sm:w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={() => setIsDeleting(true)}
+                                className="p-1.5 sm:p-2 rounded-full hover:bg-[var(--color-destructive-600)]/10 transition-colors text-[var(--muted-foreground)] hover:text-[var(--color-destructive-600)]"
+                                title="Delete Credential"
+                            >
+                                <Trash2 className="w-3.5 h-3.5 sm:w-4 h-4" />
                             </button>
                             <button
                                 onClick={onToggleExpand}
@@ -605,6 +667,73 @@ function CredentialCard({
                             </div>
                         )}
                     </div>
+                </div>
+            )}
+
+            {isDeleting && (
+                <div className="absolute inset-x-0 bottom-0 top-1.5 bg-white/98 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    {!isAuthPending ? (
+                        <div className="flex flex-col items-center gap-5 text-center max-w-[320px]">
+                            <div className="w-14 h-14 rounded-full flex items-center justify-center text-[var(--color-destructive-600)] bg-[var(--color-destructive-600)]/10 border border-[var(--color-destructive-600)]/20 shadow-sm shadow-[var(--color-destructive-600)]/10">
+                                <ShieldAlert className="w-7 h-7" />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <h4 className="text-[18px] font-900 tracking-tight text-[var(--neutral-900)]">confirm removal</h4>
+                                <p className="text-[12px] text-[var(--muted-foreground)] font-500 leading-relaxed px-4">
+                                    You are about to securely remove <strong>{name}</strong> from your Kavach vault.
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-3 w-full mt-2">
+                                <LoKeyButton
+                                    variant="primary"
+                                    size="l"
+                                    className="w-full h-12 bg-[var(--color-destructive-600)] hover:bg-[var(--color-destructive-700)] border-none shadow-md shadow-[var(--color-destructive-600)]/20"
+                                    onClick={() => setIsAuthPending(true)}
+                                >
+                                    Proceed to Delete
+                                </LoKeyButton>
+                                <button
+                                    onClick={() => setIsDeleting(false)}
+                                    className="text-[12px] font-700 text-[var(--muted-foreground)] hover:text-[var(--neutral-900)] transition-colors h-10"
+                                >
+                                    Cancel & Return
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center gap-6 text-center max-w-[320px] animate-in zoom-in duration-300">
+                            <div className="w-16 h-16 rounded-full bg-[var(--primary-500)]/5 flex items-center justify-center text-[var(--primary-500)] relative">
+                                <Fingerprint className="w-8 h-8" />
+                                <div className="absolute inset-[-4px] border border-[var(--primary-500)]/30 rounded-full animate-ping opacity-20"></div>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <h4 className="text-[17px] font-900 tracking-tight">Biometric Authorization</h4>
+                                <p className="text-[12px] text-[var(--muted-foreground)] font-500 leading-relaxed">
+                                    Scanning fingerprint to authorize the permanent deletion of this credential record.
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-3 w-full">
+                                <LoKeyButton
+                                    variant="primary"
+                                    size="l"
+                                    className="w-full h-12"
+                                    onClick={() => {
+                                        setTimeout(() => {
+                                            onDelete();
+                                        }, 1000);
+                                    }}
+                                >
+                                    Simulate Match
+                                </LoKeyButton>
+                                <button
+                                    onClick={() => setIsAuthPending(false)}
+                                    className="text-[12px] font-700 text-[var(--muted-foreground)]"
+                                >
+                                    Switch to PIN
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

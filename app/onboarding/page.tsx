@@ -20,6 +20,7 @@ import {
     Video,
     FileText,
     Key,
+    Zap,
     Lock as LockIcon,
     Cpu,
     ScanFace
@@ -633,14 +634,29 @@ function OnboardingContent() {
                         </p>
                     </div>
 
-                    <div className="w-full flex flex-col gap-3">
+                    <div className="w-full flex flex-col gap-4">
+                        <div className="p-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white flex items-center justify-between w-full shadow-sm">
+                            <div className="flex items-center gap-4 min-w-0">
+                                <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--primary-500)] text-white flex items-center justify-center shadow-md">
+                                    <Zap className="w-5 h-5" />
+                                </div>
+                                <div className="text-left flex flex-col min-w-0">
+                                    <span className="text-[10px] font-800 uppercase text-[var(--muted-foreground)] tracking-widest">Kavach Discovery ID</span>
+                                    <span className="text-[15px] font-900 text-[var(--primary-500)] truncate">ammar@kavach</span>
+                                </div>
+                            </div>
+                            <div className="px-2 py-0.5 rounded bg-[var(--primary-500)]/5 border border-[var(--primary-500)]/10 text-[9px] font-800 text-[var(--primary-500)] uppercase tracking-tighter">
+                                Primary Handle
+                            </div>
+                        </div>
+
                         <div className="p-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white flex items-center gap-4 w-full shadow-sm">
-                            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--primary-500)] text-white flex items-center justify-center shadow-md">
+                            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--muted)] text-[var(--muted-foreground)] flex items-center justify-center">
                                 <Key className="w-5 h-5" />
                             </div>
                             <div className="text-left flex flex-col min-w-0">
                                 <span className="text-[10px] font-800 uppercase text-[var(--muted-foreground)] tracking-widest">Digital ID (DID)</span>
-                                <span className="text-[13px] font-700 font-mono truncate">did:kavach:982fd8...7a4x9</span>
+                                <span className="text-[12px] font-700 font-mono truncate text-[var(--muted-foreground)]">did:kavach:982fd8...7a4x9</span>
                             </div>
                         </div>
 
@@ -650,21 +666,22 @@ function OnboardingContent() {
                                 Validated via DigiLocker Trust Network. Ready for Verifiable Credential issuance.
                             </p>
                         </div>
-                    </div>
 
-                    <LoKeyButton
-                        variant="primary"
-                        className="w-full mt-2 py-6"
-                        size="xxl"
-                        onClick={() => {
-                            localStorage.setItem("kavach_identity_verified", "false"); // Still need VKYC for full verify
-                            addAuditLog("Session Active", "User redirected to Dashboard");
-                            window.location.href = "/dashboard";
-                        }}
-                        rightIcon={<ArrowRight className="w-5 h-5" />}
-                    >
-                        Go to Dashboard
-                    </LoKeyButton>
+                        <LoKeyButton
+                            variant="primary"
+                            className="w-full mt-2 py-6"
+                            size="xxl"
+                            onClick={() => {
+                                localStorage.setItem("kavach_identity_verified", "false"); // Still need VKYC for full verify
+                                localStorage.setItem("kavach_user_id", "ammar@kavach");
+                                addAuditLog("Session Active", "User redirected to Dashboard");
+                                window.location.href = "/dashboard";
+                            }}
+                            rightIcon={<ArrowRight className="w-5 h-5" />}
+                        >
+                            Go to Dashboard
+                        </LoKeyButton>
+                    </div>
                 </div>
             )}
         </OnboardingLayout>
