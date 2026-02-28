@@ -66,7 +66,7 @@ export default function NavigatorPage() {
       color: "bg-blue-600",
       items: [
         { label: "Onboarding Splash", icon: Smartphone, href: "/onboarding" },
-        { label: "Authentication Gateway", icon: Fingerprint, href: "/login" },
+        { label: "Authentication Gateway", icon: Fingerprint, href: "/onboarding?login=true" },
       ]
     },
     {

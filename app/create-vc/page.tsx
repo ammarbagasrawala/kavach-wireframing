@@ -19,6 +19,7 @@ import {
     FileText,
     ChevronDown,
     User,
+    UserRoundCheck,
     MapPin,
     Calendar,
     Clock,
@@ -27,7 +28,9 @@ import {
     Search,
     GraduationCap,
     Briefcase,
-    Plus
+    Plus,
+    Globe,
+    Zap
 } from "lucide-react";
 
 // --- Flow 2 Components ---
@@ -71,10 +74,23 @@ const UnifiedConsent = ({ onNext }: any) => {
 };
 
 // --- OTP Verification Steps (CKYCR + DigiLocker) ---
-const OTPVerification = ({ onNext }: any) => {
-    const [step, setStep] = useState(1); // 1: CKYCR Query, 2: CKYCR OTP, 3: Aadhaar OTP, 4: PAN OTP
+const OTPVerification = ({ onNext, selectedDocs = ["aadhaar", "pan", "ckycr"] }: any) => {
+    // Sequence order
+    const priority = ["aadhaar", "pan", "passport", "voter", "ckycr"];
+    const docsToVerify = priority.filter(p => selectedDocs.includes(p));
+
+    const [docPageIndex, setDocPageIndex] = useState(0); // Index in docsToVerify
+    const [isSearching, setIsSearching] = useState(true);
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-    const [isQuerying, setIsQuerying] = useState(false);
+
+    const currentDocId = docsToVerify[docPageIndex];
+    const docMeta: any = {
+        aadhaar: { title: "Aadhaar", icon: FileText, registry: "DigiLocker" },
+        pan: { title: "PAN Card", icon: Hash, registry: "DigiLocker" },
+        passport: { title: "Passport", icon: Globe, registry: "DigiLocker" },
+        voter: { title: "Voter ID", icon: UserRoundCheck, registry: "DigiLocker" },
+        ckycr: { title: "CKYCR Record", icon: ShieldCheck, registry: "Central Registry" }
+    }[currentDocId];
 
     const handleOtpChange = (index: number, value: string) => {
         if (value.length > 1) value = value[0];
@@ -85,19 +101,18 @@ const OTPVerification = ({ onNext }: any) => {
     };
 
     useEffect(() => {
-        if (step === 1) {
-            setIsQuerying(true);
-            setTimeout(() => {
-                setIsQuerying(false);
-                setStep(2);
-            }, 2000);
-        }
-    }, []);
+        // Start searching state when document changes
+        setIsSearching(true);
+        const timer = setTimeout(() => {
+            setIsSearching(false);
+        }, 2000);
+        return () => clearTimeout(timer);
+    }, [docPageIndex]);
 
-    const nextSubStep = () => {
+    const handleVerify = () => {
         setOtp(["", "", "", "", "", ""]);
-        if (step < 4) {
-            setStep(step + 1);
+        if (docPageIndex < docsToVerify.length - 1) {
+            setDocPageIndex(docPageIndex + 1);
         } else {
             onNext();
         }
@@ -108,47 +123,49 @@ const OTPVerification = ({ onNext }: any) => {
             <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col h-full">
                 <div className="flex flex-col gap-2 mb-6">
                     <div className="flex items-center gap-2 text-[var(--primary-500)] font-800 text-[12px] uppercase tracking-wider">
-                        <Smartphone className="w-4 h-4" />
-                        {step === 1 && "CKYCR Lookup"}
-                        {step === 2 && "CKYCR Verification"}
-                        {step === 3 && "Aadhaar (DigiLocker)"}
-                        {step === 4 && "PAN (DigiLocker)"}
+                        <docMeta.icon className="w-4 h-4" />
+                        {docMeta.title} ({docMeta.registry})
                     </div>
                     <h2 className="text-[20px] font-800 tracking-tight">
-                        {step === 1 && (isQuerying ? "Querying CKYCR..." : "Found 1 Record!")}
-                        {step >= 2 && "Enter OTP"}
+                        {isSearching ? (currentDocId === 'ckycr' ? 'Querying Registry...' : 'Querying DigiLocker...') : "Verify & Fetch"}
                     </h2>
                     <p className="text-[14px] text-[var(--muted-foreground)]">
-                        {step === 1 && (isQuerying ? "Searching central registries for your data..." : "We found a CKYCR record linked to your phone number +91 ••••• 5678.")}
-                        {step >= 2 && `A 6-digit code has been sent to your Aadhaar-linked mobile for ${step === 2 ? "CKYCR" : step === 3 ? "Aadhaar" : "PAN"} fetch.`}
+                        {isSearching
+                            ? (currentDocId === 'ckycr' ? `Searching Central Registry for your records...` : `Fetching ${docMeta.title} record from DigiLocker...`)
+                            : `A 6-digit code has been sent to your mobile to authorize ${docMeta.title} fetch.`}
                     </p>
                 </div>
 
-                {step === 1 && !isQuerying && (
-                    <div className="p-4 rounded-[var(--radius-lg)] border border-[var(--primary-500)]/20 bg-[var(--primary-500)]/5 flex flex-col gap-3">
-                        <div className="flex justify-between items-center text-[13px]">
-                            <span className="font-600">CKYC Identifier</span>
-                            <span className="font-700">4002 •••• 9021</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[13px]">
-                            <span className="font-600">Last Verified</span>
-                            <span className="font-700">12 Jan 2024</span>
-                        </div>
+                {isSearching ? (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-4 py-12">
+                        <div className="w-16 h-16 rounded-full border-4 border-[var(--primary-500)]/20 border-t-[var(--primary-500)] animate-spin"></div>
+                        <p className="text-[12px] font-700 text-[var(--primary-500)] animate-pulse uppercase tracking-widest">Active Search...</p>
                     </div>
-                )}
-
-                {step >= 2 && (
-                    <div className="flex flex-col gap-4">
-                        <div className="grid grid-cols-6 gap-2">
-                            {otp.map((digit, i) => (
-                                <input
-                                    key={i} id={`otp-${i}`} type="text" maxLength={1} value={digit}
-                                    onChange={e => handleOtpChange(i, e.target.value)}
-                                    className="w-full aspect-square text-center text-[20px] font-800 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] focus:border-[var(--primary-500)] outline-none"
-                                />
-                            ))}
+                ) : (
+                    <div className="flex flex-col gap-6">
+                        <div className="bg-[var(--primary-500)]/5 border border-[var(--primary-500)]/10 p-4 rounded-[var(--radius-lg)] flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[var(--primary-500)] shadow-sm">
+                                <Search className="w-5 h-5" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[13px] font-800">Record Located</span>
+                                <span className="text-[11px] text-[var(--muted-foreground)]">Auth needed to fetch signed data</span>
+                            </div>
                         </div>
-                        <button className="text-[12px] font-700 text-[var(--primary-500)] self-start">Resend OTP</button>
+
+                        <div className="flex flex-col gap-4">
+                            <div className="grid grid-cols-6 gap-2">
+                                {otp.map((digit, i) => (
+                                    <input
+                                        key={i} id={`otp-${i}`} type="text" maxLength={1} value={digit}
+                                        onChange={e => handleOtpChange(i, e.target.value)}
+                                        className="w-full aspect-square text-center text-[20px] font-800 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] focus:border-[var(--primary-500)] outline-none"
+                                        autoFocus={i === 0}
+                                    />
+                                ))}
+                            </div>
+                            <button className="text-[12px] font-700 text-[var(--primary-500)] self-start">Resend OTP</button>
+                        </div>
                     </div>
                 )}
 
@@ -156,10 +173,10 @@ const OTPVerification = ({ onNext }: any) => {
                     variant="primary"
                     size="xl"
                     className="w-full mt-auto"
-                    disabled={isQuerying || (step >= 2 && otp.some(d => !d))}
-                    onClick={nextSubStep}
+                    disabled={isSearching || otp.some(d => !d)}
+                    onClick={handleVerify}
                 >
-                    {step === 1 ? "Proceed to Verify" : "Verify & Fetch"}
+                    {docPageIndex === docsToVerify.length - 1 ? "Complete Verification" : "Next Document"}
                 </LoKeyButton>
             </div>
         </div>
@@ -258,108 +275,340 @@ const FaceCapture = ({ onNext }: any) => {
 
 const FieldSelection = ({ onComplete }: any) => {
     const [expanded, setExpanded] = useState<string | null>("aadhaar");
+    const [selectedDocs, setSelectedDocs] = useState<string[]>(["aadhaar", "pan", "ckycr"]);
+    const [showOptionalPicker, setShowOptionalPicker] = useState(false);
 
-    const docs = [
+    const allDocs = [
         {
             id: "aadhaar",
             title: "Aadhaar Card",
             icon: FileText,
+            mandatory: true,
+            source: "DigiLocker",
+            reason: "Standard identity proof, securely fetched from your DigiLocker account.",
             fields: [
-                { label: "Full Name", required: true, desc: "Standard identifier" },
-                { label: "DOB", required: true, desc: "Required for age proof" },
-                { label: "Gender", required: true },
-                { label: "Masked Number", required: true },
-                { label: "Address", required: false, desc: "Commonly used for residency" },
-                { label: "Photo Hash", required: true, desc: "Base64 reference" },
+                { label: "Aadhaar Number", required: true, mvf: true, desc: "Primary identity record" },
+                { label: "Full Name", required: true, mvf: true, desc: "Legal proof of name" },
+                { label: "Date of Birth", required: true, mvf: true },
+                { label: "Gender", required: false },
+                { label: "Address", required: false, desc: "Proof of residence" },
+                { label: "Photo", required: false, desc: "Biometric matching" },
+                { label: "Phone Hash", required: false },
             ]
         },
         {
             id: "pan",
             title: "PAN Card",
             icon: Hash,
+            mandatory: true,
+            source: "DigiLocker",
+            reason: "Financial identity proof, securely fetched from your DigiLocker account.",
             fields: [
-                { label: "PAN Number", required: true },
-                { label: "Full Name", required: true },
+                { label: "PAN Number", required: true, mvf: true, desc: "Tax identifier" },
+                { label: "Name on Card", required: true, mvf: true },
+                { label: "Date of Birth", required: false },
+                { label: "Father's Name", required: false },
+            ]
+        },
+        {
+            id: "passport",
+            title: "Passport",
+            icon: Globe,
+            mandatory: false,
+            source: "DigiLocker",
+            reason: "International identity proof, securely fetched from your DigiLocker account.",
+            fields: [
+                { label: "Passport Number", required: true, mvf: true },
+                { label: "Expiry Date", required: true, mvf: true },
+                { label: "Full Name", required: true, mvf: true },
+                { label: "Date of Birth", required: false },
+                { label: "Citizenship", required: false },
+            ]
+        },
+        {
+            id: "voter",
+            title: "Voter ID",
+            icon: UserRoundCheck,
+            mandatory: false,
+            source: "DigiLocker",
+            reason: "Electoral identity proof, securely fetched from your DigiLocker account.",
+            fields: [
+                { label: "EPIC Number", required: true, mvf: true },
+                { label: "Full Name", required: true, mvf: true },
+                { label: "AC Name", required: false },
+                { label: "Part Number", required: false },
             ]
         },
         {
             id: "ckycr",
             title: "CKYCR Record",
             icon: ShieldCheck,
-            badge: "Found!",
+            mandatory: true,
+            source: "Central Registry",
+            reason: "Directly queried from Central KYC Registry for institutional cross-verification.",
             fields: [
-                { label: "KYC Identifier", required: false },
-                { label: "Verification Date", required: false },
+                { label: "CKYC Identifier", required: true, mvf: true },
+                { label: "Record Type", required: true, mvf: true },
+                { label: "Last Updated", required: false },
             ]
         }
     ];
 
+    const mandatoryDocs = allDocs.filter(d => d.mandatory);
+    const selectedOptionalDocs = allDocs.filter(d => !d.mandatory && selectedDocs.includes(d.id));
+    const availableOptionalDocs = allDocs.filter(d => !d.mandatory && !selectedDocs.includes(d.id));
+
+    const toggleDoc = (id: string, mandatory: boolean) => {
+        if (mandatory) return;
+        if (selectedDocs.includes(id)) {
+            setSelectedDocs(selectedDocs.filter(d => d !== id));
+            if (expanded === id) setExpanded(null);
+        } else {
+            setSelectedDocs([...selectedDocs, id]);
+            setExpanded(id);
+            setShowOptionalPicker(false);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full gap-6">
             <div className="flex flex-col gap-2">
-                <h2 className="text-[20px] md:text-[24px] font-800 leading-tight tracking-tight">Select Fields</h2>
+                <h2 className="text-[22px] font-800 leading-tight tracking-tight">Select Fields</h2>
                 <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed">
-                    Control exactly what information is included in your Verifiable Credential.
+                    Review and authorize the specific data points to be fetched into your VC.
                 </p>
             </div>
 
-            <div className="flex flex-col gap-3 overflow-y-auto pr-1 max-h-[440px]">
-                {docs.map((doc) => (
-                    <div key={doc.id} className="border border-[var(--border)] rounded-[var(--radius-lg)] overflow-hidden bg-[var(--card)] transition-all">
-                        <button
-                            onClick={() => setExpanded(expanded === doc.id ? null : doc.id)}
-                            className="w-full p-4 flex items-center justify-between hover:bg-[var(--muted)]"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-[var(--muted)] flex items-center justify-center text-[var(--primary-500)]">
-                                    <doc.icon className="w-4 h-4" />
+            {/* DigiLocker Awareness Banner */}
+            <div className="p-4 rounded-[var(--radius-xl)] bg-blue-500/10 border border-blue-500/20 flex gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white shrink-0 shadow-md">
+                    <Zap className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col gap-1">
+                    <span className="text-[14px] font-800 text-blue-600 tracking-tight">Records Found in DigiLocker</span>
+                    <p className="text-[12px] text-[var(--muted-foreground)] leading-relaxed font-500">
+                        Based on your profile, we've located **Aadhaar, PAN, and Passport** in your linked DigiLocker. Would you like to include these in your VC for maximum utility?
+                    </p>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar -mr-2">
+                <div className="flex flex-col gap-5 pb-6">
+                    {/* Mandatory Section */}
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-[12px] font-900 uppercase tracking-widest text-[var(--muted-foreground)]">Mandatory Proofs</h3>
+                            <span className="text-[10px] bg-[var(--primary-500)]/10 text-[var(--primary-500)] px-2 py-0.5 rounded-full font-800 uppercase tracking-tighter">Required</span>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            {mandatoryDocs.map((doc) => (
+                                <DocCard
+                                    key={doc.id}
+                                    doc={doc}
+                                    expanded={expanded === doc.id}
+                                    isSelected={true}
+                                    onToggleExpand={() => setExpanded(expanded === doc.id ? null : doc.id)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Optional Section */}
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-[12px] font-900 uppercase tracking-widest text-[var(--muted-foreground)]">Additional Proofs</h3>
+                            <span className="text-[10px] bg-[var(--muted)] text-[var(--muted-foreground)] px-2 py-0.5 rounded-full font-800 uppercase tracking-tighter">Optional</span>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            {selectedOptionalDocs.map((doc) => (
+                                <DocCard
+                                    key={doc.id}
+                                    doc={doc}
+                                    expanded={expanded === doc.id}
+                                    isSelected={true}
+                                    onToggleExpand={() => setExpanded(expanded === doc.id ? null : doc.id)}
+                                    onRemove={() => toggleDoc(doc.id, false)}
+                                />
+                            ))}
+
+                            {availableOptionalDocs.length > 0 && (
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setShowOptionalPicker(!showOptionalPicker)}
+                                        className="w-full p-4 border-2 border-dashed border-[var(--border)] rounded-[var(--radius-xl)] flex items-center justify-center gap-2 text-[var(--muted-foreground)] hover:border-[var(--primary-500)] hover:text-[var(--primary-500)] hover:bg-[var(--primary-500)]/5 transition-all group"
+                                    >
+                                        <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+                                        <span className="text-[14px] font-700">Add Another ID for Higher Assurance</span>
+                                    </button>
+
+                                    {showOptionalPicker && (
+                                        <div className="absolute bottom-full left-0 w-full mb-2 bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius-xl)] shadow-xl z-50 overflow-hidden animate-in slide-in-from-bottom-2">
+                                            <div className="p-3 border-b border-[var(--border)] bg-[var(--muted)]/30">
+                                                <span className="text-[11px] font-800 uppercase tracking-widest text-[var(--muted-foreground)]">Select Identity Document</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                {availableOptionalDocs.map((doc) => (
+                                                    <button
+                                                        key={doc.id}
+                                                        onClick={() => toggleDoc(doc.id, false)}
+                                                        className="flex items-center gap-4 p-4 hover:bg-[var(--primary-500)]/5 transition-colors text-left group"
+                                                    >
+                                                        <div className="w-10 h-10 rounded-lg bg-[var(--muted)] flex items-center justify-center text-[var(--primary-500)] group-hover:bg-[var(--primary-500)] group-hover:text-white transition-colors">
+                                                            <doc.icon className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[14px] font-800">{doc.title}</span>
+                                                            <span className="text-[11px] text-[var(--muted-foreground)]">Raise assurance level</span>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="flex flex-col items-start">
-                                    <span className="text-[14px] font-700">{doc.title}</span>
-                                    {doc.badge && <span className="text-[10px] bg-[var(--color-success-700)] text-white px-1.5 py-0.5 rounded-full font-700">{doc.badge}</span>}
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="pt-4 border-t border-[var(--border)]">
+                <LoKeyButton
+                    variant="primary"
+                    className="w-full shadow-elevation-md"
+                    size="xxl"
+                    onClick={() => onComplete(selectedDocs)}
+                    rightIcon={<ArrowRight className="w-5 h-5" />}
+                >
+                    Agree & Fetch Identity
+                </LoKeyButton>
+                <p className="text-[12px] text-center text-[var(--muted-foreground)] mt-3 px-4 leading-snug">
+                    By continuing, you authorize fetching of cryptographically signed records from the respective registries.
+                </p>
+            </div>
+
+            <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 5px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: var(--border);
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: var(--muted-foreground);
+                }
+            `}</style>
+        </div>
+    );
+};
+
+// Helper Component for Documentation Cards
+const DocCard = ({ doc, expanded, isSelected, onToggleExpand, onRemove }: any) => {
+    return (
+        <div className={cn(
+            "border-2 rounded-[var(--radius-xl)] bg-[var(--card)] transition-all duration-300 overflow-hidden",
+            expanded ? "border-[var(--primary-500)] shadow-lg" : "border-[var(--border)] shadow-sm hover:border-[var(--primary-500)]/30"
+        )}>
+            <div className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={onToggleExpand}>
+                    <div className={cn(
+                        "w-12 h-12 rounded-[var(--radius-lg)] flex items-center justify-center transition-all duration-300",
+                        expanded ? "bg-[var(--primary-500)] text-white scale-105" : "bg-[var(--muted)] text-[var(--primary-500)]"
+                    )}>
+                        <doc.icon className="w-6 h-6" />
+                    </div>
+                    <div className="flex flex-col items-start">
+                        <span className="text-[16px] font-800 tracking-tight">{doc.title}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[11px] text-[var(--muted-foreground)] font-600">
+                                {doc.fields.length} Attributes
+                            </span>
+                            <span className="w-1 h-1 rounded-full bg-[var(--border)]"></span>
+                            <span className={cn(
+                                "text-[10px] font-900 uppercase tracking-tighter",
+                                doc.source === "DigiLocker" ? "text-blue-500" : "text-[var(--primary-500)]"
+                            )}>
+                                {doc.source}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    {onRemove && (
+                        <button onClick={onRemove} className="p-2 text-[var(--muted-foreground)] hover:text-red-500 transition-colors">
+                            <AlertCircle className="w-5 h-5" />
+                        </button>
+                    )}
+                    <button
+                        onClick={onToggleExpand}
+                        className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-800 uppercase tracking-wider transition-all",
+                            expanded ? "bg-[var(--primary-500)]/10 text-[var(--primary-500)]" : "bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--primary-500)]/5 hover:text-[var(--primary-500)]"
+                        )}
+                    >
+                        {expanded ? "Collapse" : "Edit Fields"}
+                        <ChevronDown className={cn("w-4 h-4 transition-transform duration-300", expanded && "rotate-180")} />
+                    </button>
+                </div>
+            </div>
+
+            {expanded && (
+                <div className="border-t border-[var(--border)] animate-in slide-in-from-top-2 duration-300">
+                    <div className="bg-[var(--muted)]/10 p-4">
+                        {doc.reason && (
+                            <div className="p-3 mb-4 rounded-[var(--radius-lg)] bg-[var(--primary-500)]/5 border border-[var(--primary-500)]/10 flex gap-3 shadow-inner">
+                                <Info className="w-4 h-4 text-[var(--primary-500)] shrink-0 mt-0.5" />
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[11px] font-900 text-[var(--primary-500)] uppercase tracking-widest">Purpose of Fetch</span>
+                                    <p className="text-[12px] text-[var(--muted-foreground)] leading-relaxed font-500">
+                                        {doc.reason}
+                                    </p>
                                 </div>
                             </div>
-                            <ChevronDown className={cn("w-4 h-4 transition-transform", expanded === doc.id && "rotate-180")} />
-                        </button>
+                        )}
+                        <div className="flex flex-col gap-2">
+                            <span className="text-[11px] font-900 text-[var(--muted-foreground)] uppercase tracking-widest mb-1">Standardized Identity Attributes</span>
+                            <div className="flex flex-col divide-y divide-[var(--border)] max-h-[160px] overflow-y-auto pr-2 custom-scrollbar border border-[var(--border)] rounded-[var(--radius-lg)] bg-[var(--card)] shadow-inner">
+                                {doc.fields.map((field: any, i: number) => (
+                                    <div key={i} className="px-4 py-3 flex items-start justify-between group/field hover:bg-[var(--muted)]/20 transition-colors">
+                                        <div className="flex items-start gap-3">
+                                            <div className={cn(
+                                                "w-1.5 h-1.5 rounded-full mt-2 transition-transform",
+                                                field.mvf ? "bg-[var(--primary-500)] scale-125" : "bg-[var(--muted-foreground)]/30"
+                                            )}></div>
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className={cn(
+                                                    "text-[13px] font-700",
+                                                    field.mvf ? "text-[var(--neutral-900)]" : "text-[var(--muted-foreground)]"
+                                                )}>
+                                                    {field.label}
+                                                </span>
+                                                {field.desc && <p className="text-[11px] text-[var(--muted-foreground)] font-500 leading-tight">{field.desc}</p>}
+                                            </div>
+                                        </div>
 
-                        {expanded === doc.id && (
-                            <div className="px-4 pb-4 border-t border-[var(--border)] flex flex-col divide-y divide-[var(--border)]">
-                                {doc.fields.map((field, i) => (
-                                    <div key={i} className="py-3 flex items-start gap-3">
-                                        <input
-                                            type="checkbox"
-                                            defaultChecked={field.required}
-                                            disabled={field.required}
-                                            className="mt-1 w-4 h-4 rounded border-[var(--border)] text-[var(--primary-500)] focus:ring-[var(--primary-500)]"
-                                        />
-                                        <div className="flex flex-col gap-0.5">
-                                            <span className="text-[13px] font-600">
-                                                {field.label} {field.required && <span className="text-[var(--destructive)]">*</span>}
-                                            </span>
-                                            {field && 'desc' in field && field.desc && <p className="text-[11px] text-[var(--muted-foreground)]">{field.desc}</p>}
+                                        <div className="flex items-center gap-2">
+                                            {field.mvf ? (
+                                                <span className="text-[9px] font-900 text-[var(--primary-500)] uppercase tracking-wider bg-[var(--primary-500)]/10 px-1.5 py-0.5 rounded">Core MVF</span>
+                                            ) : (
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-[9px] font-700 text-[var(--muted-foreground)] uppercase tracking-wider">Elective</span>
+                                                    <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-[var(--border)] accent-[var(--primary-500)]" />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        )}
+                        </div>
                     </div>
-                ))}
-            </div>
-
-            <div className="mt-auto pt-4 border-t border-[var(--border)]">
-                <LoKeyButton
-                    variant="primary"
-                    className="w-full"
-                    size="xxl"
-                    onClick={onComplete}
-                    rightIcon={<ArrowRight className="w-4 h-4" />}
-                >
-                    Create My Token
-                </LoKeyButton>
-                <p className="text-[12px] text-center text-[var(--muted-foreground)] mt-3">
-                    Fields marked with <span className="text-[var(--destructive)]">*</span> are mandatory for basic identity.
-                </p>
-            </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -737,6 +986,7 @@ const SuccessLocked = () => {
 
 export default function CreateVCPage() {
     const [currentStep, setCurrentStep] = useState(1); // 1: Consent, 2: Selection, 3: Face, 4: OTP, 5: Enrichment, 6: VKYC Prompt, 7: Simulation, 8: Blockchain, 9: Success
+    const [selectedDocs, setSelectedDocs] = useState<string[]>(["aadhaar", "pan", "ckycr"]);
 
     useEffect(() => {
         // Handle resume state
@@ -768,9 +1018,9 @@ export default function CreateVCPage() {
             showAudioToggle={true}
         >
             {currentStep === 1 && <UnifiedConsent onNext={() => setCurrentStep(2)} />}
-            {currentStep === 2 && <FieldSelection onComplete={() => setCurrentStep(3)} />}
+            {currentStep === 2 && <FieldSelection onComplete={(docs: string[]) => { setSelectedDocs(docs); setCurrentStep(3); }} />}
             {currentStep === 3 && <FaceCapture onNext={() => setCurrentStep(4)} />}
-            {currentStep === 4 && <OTPVerification onNext={() => setCurrentStep(5)} />}
+            {currentStep === 4 && <OTPVerification selectedDocs={selectedDocs} onNext={() => setCurrentStep(5)} />}
             {currentStep === 5 && <EnrichmentHub onNext={() => setCurrentStep(6)} />}
             {currentStep === 6 && (
                 <VKYCPrompt

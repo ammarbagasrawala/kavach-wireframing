@@ -90,9 +90,16 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage = "Dashboard", pr
         { label: "Navigator", icon: Layers, href: "/" },
     ];
 
+    const handleLogout = () => {
+        if (confirm("Are you sure you want to log out? This will clear your current session data.")) {
+            localStorage.clear();
+            window.location.href = "/onboarding";
+        }
+    };
+
     const bottomNavItems = [
         { label: "Settings", icon: Settings, href: "/settings" },
-        { label: "Logout", icon: LogOut, href: "/login" },
+        { label: "Logout", icon: LogOut, onClick: handleLogout },
     ];
 
     return (
@@ -149,7 +156,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage = "Dashboard", pr
                             key={item.label}
                             {...item}
                             collapsed={collapsed}
-                            onClick={() => window.location.href = (item as any).href}
+                            onClick={item.onClick || (() => window.location.href = (item as any).href)}
                         />
                     ))}
                 </div>

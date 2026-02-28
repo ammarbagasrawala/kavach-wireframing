@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import OnboardingLayout from "../components/OnboardingLayout";
 import LoKeyButton from "../components/LoKeyButton";
 import { cn } from "../components/LoKeyButton";
@@ -127,17 +128,19 @@ const AssistedSetup = ({ onBack, onComplete }: any) => (
     </div>
 );
 
-const PhoneInput = ({ onNext }: any) => {
+const PhoneInput = ({ onNext, isLogin }: any) => {
     const [phone, setPhone] = useState("");
     return (
         <div className="flex flex-col h-full gap-6">
             <div className="flex flex-col gap-2">
-                <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--primary-500)_12%,transparent)] flex items-center justify-center text-[var(--primary-500)]">
-                    <Smartphone className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--primary-500)_12%,transparent)] flex items-center justify-center text-[var(--primary-500)] shadow-sm">
+                    {isLogin ? <ShieldCheck className="w-6 h-6" /> : <Smartphone className="w-6 h-6" />}
                 </div>
-                <h2 className="text-[20px] md:text-[24px] font-800 leading-tight tracking-tight">Verify Mobile</h2>
+                <h2 className="text-[20px] md:text-[24px] font-800 leading-tight tracking-tight">
+                    {isLogin ? "Welcome Back" : "Verify Mobile"}
+                </h2>
                 <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed">
-                    Enter the mobile number linked to your DigiLocker or Aadhaar.
+                    {isLogin ? "Enter your registered mobile number to access your Kavach identity." : "Enter the mobile number linked to your DigiLocker or Aadhaar."}
                 </p>
             </div>
 
@@ -281,8 +284,10 @@ const OAuthSimulation = ({ onComplete }: any) => {
     );
 };
 
-const UnifiedSecuritySetup = ({ onComplete }: any) => {
-    const [step, setStep] = useState(1); // 1: Biometric, 2: PIN
+const UnifiedSecuritySetup = ({ onComplete, isLogin }: any) => {
+    // For signup (isLogin=false), we want biometric -> pin. 
+    // For login (isLogin=true), we want selection (biometric or pin).
+    const [mode, setMode] = useState<"select" | "biometric" | "pin">(isLogin ? "select" : "biometric");
     const [pin, setPin] = useState(["", "", "", "", "", ""]);
     const [isBinding, setIsBinding] = useState(false);
 
@@ -290,7 +295,11 @@ const UnifiedSecuritySetup = ({ onComplete }: any) => {
         setIsBinding(true);
         setTimeout(() => {
             setIsBinding(false);
-            setStep(2);
+            if (isLogin) {
+                onComplete();
+            } else {
+                setMode("pin");
+            }
         }, 2000);
     };
 
@@ -312,14 +321,65 @@ const UnifiedSecuritySetup = ({ onComplete }: any) => {
                 <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--color-success-700)_12%,transparent)] flex items-center justify-center text-[var(--color-success-700)] shadow-sm">
                     <LockIcon className="w-6 h-6" />
                 </div>
-                <h2 className="text-[20px] md:text-[24px] font-800 leading-tight tracking-tight">Set Security</h2>
+                <h2 className="text-[20px] md:text-[24px] font-800 leading-tight tracking-tight">
+                    {isLogin ? "Security Check" : "Set Security"}
+                </h2>
                 <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed">
-                    {step === 1 ? "Protect your identity using your device's secure hardware." : "Create a 6-digit PIN as a backup for your biometrics."}
+                    {mode === "select" && "Choose how you'd like to protect your Kavach identity."}
+                    {mode === "biometric" && (
+                        isLogin
+                            ? "Authenticating your session using biometrics."
+                            : "Step 1: Protect your identity using your device's secure hardware."
+                    )}
+                    {mode === "pin" && (
+                        isLogin
+                            ? "Enter your 6-digit PIN to continue."
+                            : "Step 2: Create a 6-digit secure PIN as a backup for your biometrics."
+                    )}
                 </p>
             </div>
 
-            {step === 1 ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-10 py-8">
+            {mode === "select" && (
+                <div className="flex-1 flex flex-col gap-4 py-4 animate-in fade-in duration-500">
+                    <button
+                        onClick={() => setMode("biometric")}
+                        className="p-5 rounded-[var(--radius-xl)] border-2 border-[var(--border)] bg-white text-left hover:border-[var(--primary-500)] hover:bg-[color-mix(in_srgb,var(--primary-500)_4%,transparent)] transition-all flex items-center gap-4 group"
+                    >
+                        <div className="w-12 h-12 rounded-[var(--radius-lg)] bg-[var(--primary-500)]/10 text-[var(--primary-500)] flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <ScanFace className="w-6 h-6" />
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-[16px] font-800 text-[var(--neutral-900)]">Biometrics</span>
+                            <span className="text-[12px] text-[var(--muted-foreground)]">Use Face / Touch ID</span>
+                        </div>
+                        <ArrowRight className="w-5 h-5 ml-auto text-[var(--border)] group-hover:text-[var(--primary-500)] group-hover:translate-x-1 transition-all" />
+                    </button>
+
+                    <button
+                        onClick={() => setMode("pin")}
+                        className="p-5 rounded-[var(--radius-xl)] border-2 border-[var(--border)] bg-white text-left hover:border-[var(--primary-500)] hover:bg-[color-mix(in_srgb,var(--primary-500)_4%,transparent)] transition-all flex items-center gap-4 group"
+                    >
+                        <div className="w-12 h-12 rounded-[var(--radius-lg)] bg-[var(--primary-500)]/10 text-[var(--primary-500)] flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Key className="w-6 h-6" />
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-[16px] font-800 text-[var(--neutral-900)]">Security PIN</span>
+                            <span className="text-[12px] text-[var(--muted-foreground)]">Use a 6-digit secret code</span>
+                        </div>
+                        <ArrowRight className="w-5 h-5 ml-auto text-[var(--border)] group-hover:text-[var(--primary-500)] group-hover:translate-x-1 transition-all" />
+                    </button>
+
+                    <div className="mt-auto p-4 rounded-[var(--radius-lg)] bg-[var(--muted)]/30 border border-[var(--border)] flex gap-3">
+                        <Cpu className="w-5 h-5 text-[var(--primary-500)] shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-[var(--muted-foreground)] leading-snug italic">
+                            All security keys are stored in your device's <strong>Secure Enclave</strong> and never leave your phone.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {mode === "biometric" && (
+                <div className="flex-1 flex flex-col items-center justify-center gap-10 py-8 animate-in zoom-in duration-500">
                     <div className="relative">
                         <div className="absolute inset-0 m-auto w-32 h-32 rounded-full bg-[var(--primary-500)]/10 animate-ping"></div>
                         <div className="absolute inset-0 m-auto w-24 h-24 rounded-full bg-[var(--primary-500)]/20 animate-pulse"></div>
@@ -333,29 +393,36 @@ const UnifiedSecuritySetup = ({ onComplete }: any) => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-4 w-full">
-                        <div className="flex items-start gap-3 p-4 rounded-[var(--radius-lg)] bg-white border border-[var(--border)] shadow-sm">
-                            <Cpu className="w-5 h-5 text-[var(--primary-500)] shrink-0 mt-0.5" />
-                            <div className="flex flex-col gap-0.5">
-                                <span className="text-[13px] font-700 uppercase tracking-tight">Hardware Protection</span>
-                                <p className="text-[11px] text-[var(--muted-foreground)] leading-snug italic">
-                                    Keys stored in Secure Enclave. Only you can access them.
-                                </p>
+                    <div className="mt-auto flex flex-col gap-3 w-full">
+                        <LoKeyButton
+                            variant="primary"
+                            className="w-full"
+                            size="xxl"
+                            onClick={handleBiometric}
+                            disabled={isBinding}
+                        >
+                            {isBinding
+                                ? (isLogin ? "Verifying..." : "Registering...")
+                                : (isLogin ? "Verify Biometrics" : "Step 1: Enable Face / Touch ID")}
+                        </LoKeyButton>
+                        {isLogin ? (
+                            <button
+                                className="text-[13px] font-700 text-[var(--primary-500)] hover:underline mx-auto"
+                                onClick={() => setMode("select")}
+                            >
+                                Choose another method
+                            </button>
+                        ) : (
+                            <div className="flex items-center justify-center gap-2 mt-2">
+                                <div className="w-2 h-2 rounded-full bg-[var(--primary-500)]"></div>
+                                <div className="w-2 h-2 rounded-full bg-[var(--muted-foreground)]/30"></div>
                             </div>
-                        </div>
+                        )}
                     </div>
-
-                    <LoKeyButton
-                        variant="primary"
-                        className="w-full mt-auto"
-                        size="xxl"
-                        onClick={handleBiometric}
-                        disabled={isBinding}
-                    >
-                        {isBinding ? "Registering Biometrics..." : "Enable Face / Touch ID"}
-                    </LoKeyButton>
                 </div>
-            ) : (
+            )}
+
+            {mode === "pin" && (
                 <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8 animate-in slide-in-from-right-4 duration-500">
                     <div className="flex justify-between gap-2 w-full max-w-[300px]">
                         {pin.map((digit, i) => (
@@ -366,7 +433,8 @@ const UnifiedSecuritySetup = ({ onComplete }: any) => {
                                 inputMode="numeric"
                                 value={digit}
                                 onChange={(e) => handlePinChange(e.target.value.replace(/\D/g, ''), i)}
-                                className="w-10 h-14 text-center text-[24px] font-800 border-2 border-[var(--border)] rounded-[var(--radius-md)] focus:border-[var(--primary-500)] outline-none bg-[var(--muted)]/20"
+                                className="w-10 h-14 text-center text-[24px] font-800 border-2 border-[var(--border)] rounded-[var(--radius-md)] focus:border-[var(--primary-500)] outline-none bg-white shadow-sm"
+                                autoFocus={i === 0}
                             />
                         ))}
                     </div>
@@ -379,11 +447,21 @@ const UnifiedSecuritySetup = ({ onComplete }: any) => {
                             disabled={pin.some(d => !d)}
                             onClick={onComplete}
                         >
-                            Complete Setup
+                            {isLogin ? "Log In" : "Step 2: Set PIN & Complete"}
                         </LoKeyButton>
-                        <p className="text-[11px] text-center text-[var(--muted-foreground)] px-4">
-                            Try to choose a PIN that isn't easy to guess (like 123456).
-                        </p>
+                        {isLogin ? (
+                            <button
+                                className="text-[13px] font-700 text-[var(--primary-500)] hover:underline mx-auto"
+                                onClick={() => setMode("select")}
+                            >
+                                Choose another method
+                            </button>
+                        ) : (
+                            <div className="flex items-center justify-center gap-2 mt-2">
+                                <div className="w-2 h-2 rounded-full bg-[var(--primary-500)] opacity-40"></div>
+                                <div className="w-2 h-2 rounded-full bg-[var(--primary-500)]"></div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -393,11 +471,20 @@ const UnifiedSecuritySetup = ({ onComplete }: any) => {
 
 // --- Main Page Component ---
 
-export default function OnboardingPage() {
+function OnboardingContent() {
+    const searchParams = useSearchParams();
     const [currentStep, setCurrentStep] = useState(0);
     const [selectedLang, setSelectedLang] = useState("en");
     const [audioEnabled, setAudioEnabled] = useState(false);
     const [phone, setPhone] = useState("");
+    const [isLogin, setIsLogin] = useState(false);
+
+    useEffect(() => {
+        if (searchParams.get("login") === "true") {
+            setIsLogin(true);
+            setCurrentStep(4);
+        }
+    }, [searchParams]);
 
     // Step Map:
     // 0: Splash
@@ -445,11 +532,20 @@ export default function OnboardingPage() {
                     <LoKeyButton
                         variant="primary"
                         size="xxl"
-                        onClick={() => setCurrentStep(1)}
+                        onClick={() => { setIsLogin(false); setCurrentStep(1); }}
                         className="w-full text-[16px] font-800 uppercase tracking-widest shadow-xl group"
                         rightIcon={<ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
                     >
                         Get Started
+                    </LoKeyButton>
+
+                    <LoKeyButton
+                        variant="tertiary"
+                        size="xl"
+                        onClick={() => { setIsLogin(true); setCurrentStep(4); }}
+                        className="w-full text-[15px] font-700"
+                    >
+                        Already have an identity? <span className="text-[var(--primary-500)] ml-1">Login</span>
                     </LoKeyButton>
 
                     <div className="flex items-center justify-center gap-6 mt-4 opacity-60">
@@ -479,10 +575,10 @@ export default function OnboardingPage() {
             {currentStep === 2 && <AuthGateway onDigiLocker={() => setCurrentStep(4)} onAssisted={() => setCurrentStep(3)} />}
             {currentStep === 3 && <AssistedSetup onBack={() => setCurrentStep(2)} onComplete={() => window.open('https://www.digilocker.gov.in/', '_blank')} />}
 
-            {currentStep === 4 && <PhoneInput onNext={(p: string) => { setPhone(p); setCurrentStep(5); }} />}
-            {currentStep === 5 && <OTPVerify phone={phone} onNext={() => setCurrentStep(6)} onResend={() => alert("OTP Resent!")} />}
+            {currentStep === 4 && <PhoneInput isLogin={isLogin} onNext={(p: string) => { setPhone(p); setCurrentStep(5); }} />}
+            {currentStep === 5 && <OTPVerify phone={phone} onNext={() => isLogin ? setCurrentStep(7) : setCurrentStep(6)} onResend={() => alert("OTP Resent!")} />}
             {currentStep === 6 && <OAuthSimulation onComplete={() => setCurrentStep(7)} />}
-            {currentStep === 7 && <UnifiedSecuritySetup onComplete={() => setCurrentStep(8)} />}
+            {currentStep === 7 && <UnifiedSecuritySetup isLogin={isLogin} onComplete={() => setCurrentStep(8)} />}
 
             {currentStep === 8 && (
                 <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-6 animate-in fade-in zoom-in duration-500">
@@ -490,9 +586,13 @@ export default function OnboardingPage() {
                         <CheckCircle2 className="w-12 h-12" />
                     </div>
                     <div className="flex flex-col gap-2">
-                        <h2 className="text-[24px] md:text-[28px] font-900 tracking-tight text-[var(--neutral-900)] uppercase">Identity Secured</h2>
+                        <h2 className="text-[24px] md:text-[28px] font-900 tracking-tight text-[var(--neutral-900)] uppercase">
+                            {isLogin ? "Identity Authenticated" : "Identity Secured"}
+                        </h2>
                         <p className="text-[15px] md:text-[16px] text-[var(--muted-foreground)] px-4 leading-relaxed">
-                            Congratulations! Your Kavach profile is ready. You now have full control over your digital identity.
+                            {isLogin
+                                ? "Welcome back! Your secure session has been established."
+                                : "Congratulations! Your Kavach profile is ready. You now have full control over your digital identity."}
                         </p>
                     </div>
 
@@ -530,5 +630,13 @@ export default function OnboardingPage() {
                 </div>
             )}
         </OnboardingLayout>
+    );
+}
+
+export default function OnboardingPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <OnboardingContent />
+        </Suspense>
     );
 }

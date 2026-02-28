@@ -24,6 +24,9 @@ export const EnrichmentHub: React.FC<EnrichmentHubProps> = ({ onNext, standalone
     const [view, setView] = useState<"hub" | "assisted">("hub");
     const [fetching, setFetching] = useState<string | null>(null);
     const [fetched, setFetched] = useState<string[]>([]);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [verifyingDocId, setVerifyingDocId] = useState<string | null>(null);
+    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
 
     useEffect(() => {
         const stored = localStorage.getItem("kavach_fetched_docs");
@@ -39,29 +42,97 @@ export const EnrichmentHub: React.FC<EnrichmentHubProps> = ({ onNext, standalone
     ];
 
     const handleFetch = (id: string) => {
+        setVerifyingDocId(id);
+        setIsVerifying(true);
+        setOtp(["", "", "", "", "", ""]);
+    };
+
+    const handleVerifyOtp = () => {
+        if (otp.some(d => !d)) return;
+
+        const id = verifyingDocId!;
         setFetching(id);
+        setIsVerifying(false);
+
         setTimeout(() => {
             const newFetched = [...fetched, id];
             setFetched(newFetched);
             localStorage.setItem("kavach_fetched_docs", JSON.stringify(newFetched));
 
-            // Audit log simulation
             const logs = JSON.parse(localStorage.getItem("kavach_audit_logs") || "[]");
             const docName = docs.find(d => d.id === id)?.name;
             logs.unshift({
                 id: `enrich-${Date.now()}-${Math.random()}`,
                 action: "Document Linked",
-                details: `${docName} fetched from DigiLocker`,
+                details: `${docName} fetched from DigiLocker (OTP Verified)`,
                 time: "Just Now",
                 status: "Success"
             });
             localStorage.setItem("kavach_audit_logs", JSON.stringify(logs));
 
             setFetching(null);
-            // Dispatch storage event for other components to update
+            setVerifyingDocId(null);
             window.dispatchEvent(new Event("storage"));
         }, 1500);
     };
+
+    const handleOtpChange = (index: number, value: string) => {
+        if (value.length > 1) value = value[0];
+        const newOtp = [...otp];
+        newOtp[index] = value;
+        setOtp(newOtp);
+        if (value && index < 5) document.getElementById(`enrich-otp-${index + 1}`)?.focus();
+    };
+
+    if (isVerifying) {
+        const doc = docs.find(d => d.id === verifyingDocId);
+        return (
+            <div className="flex flex-col h-full gap-8 animate-in slide-in-from-right duration-300 px-1 py-4">
+                <div className="flex flex-col gap-3">
+                    <button onClick={() => setIsVerifying(false)} className="flex items-center gap-2 text-[13px] font-700 text-[var(--muted-foreground)] hover:text-[var(--neutral-900)] transition-colors w-fit">
+                        <ChevronLeft className="w-4 h-4" /> Cancel Fetch
+                    </button>
+                    <div className="flex items-center gap-3 mt-2">
+                        <div className="w-10 h-10 rounded-lg bg-[var(--primary-500)] text-white flex items-center justify-center">
+                            {doc?.icon}
+                        </div>
+                        <div className="flex flex-col">
+                            <h2 className="text-[20px] font-800 leading-tight">{doc?.name}</h2>
+                            <span className="text-[12px] text-[var(--muted-foreground)] font-600">Secure DigiLocker Fetch</span>
+                        </div>
+                    </div>
+                    <p className="text-[14px] text-[var(--muted-foreground)] leading-relaxed mt-2">
+                        Enter the 6-digit verification code sent to your mobile to authorize the fetch of your **{doc?.name}** from DigiLocker.
+                    </p>
+                </div>
+
+                <div className="flex flex-col gap-6">
+                    <div className="grid grid-cols-6 gap-2">
+                        {otp.map((digit, i) => (
+                            <input
+                                key={i} id={`enrich-otp-${i}`} type="text" maxLength={1} value={digit}
+                                onChange={e => handleOtpChange(i, e.target.value)}
+                                className="w-full aspect-square text-center text-[20px] font-800 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] focus:border-[var(--primary-500)] outline-none shadow-sm"
+                                autoFocus={i === 0}
+                            />
+                        ))}
+                    </div>
+
+                    <LoKeyButton
+                        variant="primary"
+                        size="xl"
+                        className="w-full shadow-lg"
+                        disabled={otp.some(d => !d)}
+                        onClick={handleVerifyOtp}
+                    >
+                        Verify & Link Document
+                    </LoKeyButton>
+
+                    <button className="text-[12px] font-700 text-[var(--primary-500)] self-center">Resend Code</button>
+                </div>
+            </div>
+        );
+    }
 
     if (view === "assisted") {
         return (
