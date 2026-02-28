@@ -152,10 +152,10 @@ export default function RequestsPage() {
                         <div className="flex flex-col gap-4 pt-4 border-t border-[var(--border)]">
                             <h2 className="text-[16px] font-700 text-[var(--muted-foreground)]">Recent Actions</h2>
                             <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius-xl)] overflow-hidden">
-                                <div className="overflow-x-auto">
-                                    <div className="min-w-[700px]">
-                                        <table className="w-full text-left border-collapse">
-                                            <thead className="bg-[var(--background)] border-b border-[var(--border)] text-[10px] md:text-[11px] font-700 text-[var(--muted-foreground)] uppercase">
+                                <div className="overflow-x-auto md:overflow-visible">
+                                    <div className="min-w-0 md:min-w-[700px]">
+                                        <table className="w-full text-left border-collapse flex flex-col md:table">
+                                            <thead className="bg-[var(--background)] border-b border-[var(--border)] text-[10px] md:text-[11px] font-700 text-[var(--muted-foreground)] uppercase hidden md:table-header-group">
                                                 <tr>
                                                     <th className="px-6 py-4">Requester</th>
                                                     <th className="px-6 py-4">Purpose</th>
@@ -165,10 +165,15 @@ export default function RequestsPage() {
                                             </thead>
                                             <tbody className="divide-y divide-[var(--border)]">
                                                 {historyRequests.map((req) => (
-                                                    <tr key={req.id} className="text-[13px] hover:bg-[var(--muted)]/20 transition-colors">
-                                                        <td className="px-6 py-4 font-700">{req.org}</td>
-                                                        <td className="px-6 py-4 text-[var(--muted-foreground)]">{req.purpose}</td>
-                                                        <td className="px-6 py-4">
+                                                    <tr key={req.id} className="text-[13px] hover:bg-[var(--muted)]/20 transition-colors flex flex-col md:table-row py-4 md:py-0 px-6 md:px-0">
+                                                        <td className="md:px-6 md:py-4 font-700 border-none md:border-b">
+                                                            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3">
+                                                                <span className="text-[14px] md:text-[13px]">{req.org}</span>
+                                                                <span className="text-[11px] text-[var(--muted-foreground)] md:hidden">Recently</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="md:px-6 md:py-4 text-[var(--muted-foreground)] border-none md:border-b mb-2 md:mb-0">{req.purpose}</td>
+                                                        <td className="md:px-6 md:py-4 border-none md:border-b mb-2 md:mb-0">
                                                             <div className={cn(
                                                                 "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-800 uppercase",
                                                                 req.status === "granted" ? "bg-[var(--color-success-700)]/10 text-[var(--color-success-700)]" : "bg-[var(--color-error-600)]/10 text-[var(--color-error-600)]"
@@ -176,7 +181,7 @@ export default function RequestsPage() {
                                                                 {req.status === "granted" ? "Granted" : "Denied"}
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right text-[var(--muted-foreground)]">Recently</td>
+                                                        <td className="md:px-6 md:py-4 md:text-right text-[var(--muted-foreground)] border-none md:border-b hidden md:table-cell">Recently</td>
                                                     </tr>
                                                 ))}
                                             </tbody>

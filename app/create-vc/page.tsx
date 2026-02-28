@@ -157,8 +157,8 @@ const OTPVerification = ({ onNext, selectedDocs = ["aadhaar", "pan", "ckycr"] }:
                             <div className="grid grid-cols-6 gap-1.5 md:gap-2">
                                 {otp.map((digit, i) => (
                                     <input
-                                        key={i} id={`otp-${i}`} type="text" maxLength={1} value={digit}
-                                        onChange={e => handleOtpChange(i, e.target.value)}
+                                        key={i} id={`otp-${i}`} type="text" inputMode="numeric" maxLength={1} value={digit}
+                                        onChange={e => handleOtpChange(i, e.target.value.replace(/\D/g, ''))}
                                         className="w-full aspect-square text-center text-[18px] md:text-[20px] font-800 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] focus:border-[var(--primary-500)] outline-none"
                                         autoFocus={i === 0}
                                     />

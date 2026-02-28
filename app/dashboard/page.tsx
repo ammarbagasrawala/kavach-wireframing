@@ -195,7 +195,7 @@ export default function DashboardPage() {
                                 <LoKeyButton variant="tertiary" size="xxs">Download Logs</LoKeyButton>
                             </div>
                             <div className="flex-1 overflow-x-auto">
-                                <div className="min-w-[600px] lg:min-w-0 divide-y divide-[var(--border)]">
+                                <div className="divide-y divide-[var(--border)]">
                                     {auditLogs.slice(0, 5).map((log) => (
                                         <div key={log.id} className="p-4 flex items-center gap-4 hover:bg-[var(--muted)]/30 transition-colors">
                                             <div className="w-10 h-10 rounded-full bg-[var(--color-success-700)]/5 flex items-center justify-center text-[var(--color-success-700)] shrink-0">
