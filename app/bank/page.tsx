@@ -18,6 +18,7 @@ import {
     RefreshCw,
     LogOut,
     ChevronLeft,
+    ChevronDown,
     User,
     Lock,
     Send,
@@ -346,6 +347,7 @@ const ProviderStep8Success = ({ onBackToPortal }: { onBackToPortal: () => void }
 const SeekerCreateRequest = ({ bankName, onSent, onBack }: { bankName: string; onSent: () => void; onBack: () => void }) => {
     const [did, setDid] = useState("ammar@kavach");
     const [selectedFields, setSelectedFields] = useState<string[]>([]);
+    const [attributesOpen, setAttributesOpen] = useState(false);
     const [purpose, setPurpose] = useState("Savings Account Opening");
     const [reason, setReason] = useState("Regulatory requirement for Digital KYC as per RBI Master Direction on KYC.");
     const [retention, setRetention] = useState(RETENTION_OPTIONS[0]);
@@ -399,13 +401,37 @@ const SeekerCreateRequest = ({ bankName, onSent, onBack }: { bankName: string; o
             </div>
             <div>
                 <label className="text-[12px] font-700 uppercase tracking-widest text-[var(--muted-foreground)] block mb-2">Requested attributes</label>
-                <div className="flex flex-wrap gap-2">
-                    {AVAILABLE_ATTRIBUTES.map((f) => (
-                        <label key={f} className={cn("px-3 py-2 rounded-[var(--radius-md)] border cursor-pointer text-[13px] font-600 transition-all", selectedFields.includes(f) ? "bg-[var(--primary-500)]/10 border-[var(--primary-500)] text-[var(--primary-500)]" : "bg-[var(--muted)]/50 border-[var(--border)]")}>
-                            <input type="checkbox" checked={selectedFields.includes(f)} onChange={() => toggleField(f)} className="sr-only" />
-                            {f}
-                        </label>
-                    ))}
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => setAttributesOpen((o) => !o)}
+                        className={cn(
+                            "w-full px-4 py-3 rounded-[var(--radius-md)] border-2 text-left flex items-center justify-between gap-2 transition-colors",
+                            attributesOpen ? "border-[var(--primary-500)] bg-[var(--card)]" : "border-[var(--border)] bg-[var(--card)] hover:border-[var(--muted-foreground)]/40"
+                        )}
+                    >
+                        <span className="text-[14px] font-600 text-[var(--neutral-900)]">
+                            {selectedFields.length === 0 ? "Select attributes" : `${selectedFields.length} attribute${selectedFields.length === 1 ? "" : "s"} selected`}
+                        </span>
+                        <ChevronDown className={cn("w-5 h-5 shrink-0 text-[var(--muted-foreground)] transition-transform", attributesOpen && "rotate-180")} />
+                    </button>
+                    {attributesOpen && (
+                        <ul className="absolute z-10 mt-1 w-full rounded-[var(--radius-md)] border-2 border-[var(--border)] bg-[var(--card)] shadow-elevation-md max-h-56 overflow-auto py-1">
+                            {AVAILABLE_ATTRIBUTES.map((f) => (
+                                <li key={f}>
+                                    <label className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-[var(--muted)]/50 text-[14px] font-600">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedFields.includes(f)}
+                                            onChange={() => toggleField(f)}
+                                            className="w-4 h-4 rounded border-2 border-[var(--border)] text-[var(--primary-500)] focus:ring-[var(--primary-500)]"
+                                        />
+                                        {f}
+                                    </label>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
             </div>
             <div>
