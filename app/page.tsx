@@ -103,7 +103,19 @@ export default function NavigatorPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--background)] flex flex-col items-center py-12 px-6">
+    <div className="min-h-screen bg-[var(--background)] flex flex-col items-center pt-24 pb-12 px-6 relative">
+      {/* Internal Review Banner */}
+      <div className="fixed top-0 left-0 w-full bg-[var(--neutral-900)] text-white py-2 px-4 z-[200] flex items-center justify-center gap-3 shadow-lg">
+        <ShieldAlert className="w-4 h-4 text-[var(--color-warning-600)]" />
+        <span className="text-[11px] font-900 uppercase tracking-[0.2em]">Internal Review Only • Not Final Product</span>
+        <div className="w-px h-3 bg-white/20 mx-2" />
+        <span className="text-[10px] font-600 opacity-70">Simulation Environment v1.2.0</span>
+      </div>
+
+      {/* Watermark */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] flex items-center justify-center select-none rotate-[-15deg]">
+        <span className="text-[12vw] font-900 uppercase">Prototyping Mode</span>
+      </div>
       {/* Background Orbs */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[var(--primary-500)]/10 blur-[120px] rounded-full"></div>
@@ -117,31 +129,34 @@ export default function NavigatorPage() {
             <img src="/logo.png" alt="Kavach Logo" className="h-12 w-auto" />
           </div>
           <h1 className="text-[32px] md:text-[48px] font-900 tracking-tighter leading-tight bg-gradient-to-br from-[var(--neutral-900)] to-[var(--neutral-600)] bg-clip-text text-transparent">
-            Wireframe Navigator
+            Prototyping & Review Dashboard
           </h1>
-          <p className="max-w-2xl text-[16px] md:text-[18px] text-[var(--muted-foreground)] leading-relaxed">
-            Experience India's first user-held tokenized KYC platform. Explore every flow,
-            from the first splash screen to secure document management.
+          <p className="max-w-2xl text-[14px] md:text-[16px] text-[var(--muted-foreground)] leading-relaxed font-500">
+            Internal evaluation tool for India's first user-held tokenized KYC platform.
+            Use the links below to jump into specific flows or start the full simulation.
           </p>
 
-          <div className="flex items-center gap-4 mt-4">
+          <div className="flex flex-col md:flex-row items-center gap-4 mt-6">
             <LoKeyButton
               variant="primary"
-              size="xl"
+              size="xxl"
+              className="px-12 h-16 text-[18px] shadow-2xl shadow-[var(--primary-500)]/20"
               onClick={() => window.location.href = "/onboarding"}
-              rightIcon={<ArrowRight className="w-4 h-4" />}
+              rightIcon={<ArrowRight className="w-5 h-5" />}
             >
-              Start Full Journey
+              Enter App Simulation
             </LoKeyButton>
-            <LoKeyButton
-              variant="tertiary"
-              size="xl"
-              className="bg-white"
-              leftIcon={<RefreshCcw className="w-4 h-4" />}
-              onClick={resetPrototype}
-            >
-              Reset Prototype
-            </LoKeyButton>
+            <div className="flex items-center gap-3">
+              <LoKeyButton
+                variant="tertiary"
+                size="xl"
+                className="bg-white border border-[var(--border)]"
+                leftIcon={<RefreshCcw className="w-4 h-4" />}
+                onClick={resetPrototype}
+              >
+                Reset States
+              </LoKeyButton>
+            </div>
           </div>
         </div>
 
@@ -161,8 +176,8 @@ export default function NavigatorPage() {
               <Info className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[14px] font-700">Experimental Wireframes</span>
-              <span className="text-[12px] text-[var(--muted-foreground)]">Built with LoKey Design System • RBI Tokenized KYC Concept</span>
+              <span className="text-[14px] font-700">Internal Simulation Tool</span>
+              <span className="text-[12px] text-[var(--muted-foreground)]">Kavach Wireframe Portal • Built for RBI Concept Review</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
