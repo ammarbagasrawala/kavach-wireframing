@@ -72,7 +72,7 @@ export default function NomineesPage() {
             const initial: Nominee[] = [
                 {
                     id: "nom-1",
-                    name: "Sara Bagasrawala",
+                    name: "Rachel Bagasrawala",
                     relationship: "Spouse",
                     dob: "12/03/1996",
                     mobile: "9876543210",
