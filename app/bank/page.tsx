@@ -28,7 +28,13 @@ import {
     Smartphone,
     Hash,
     AlertTriangle,
-    Zap
+    Zap,
+    Link2,
+    Upload,
+    IdCard,
+    CreditCard,
+    Scan,
+    Search
 } from "lucide-react";
 
 const BANK_STORAGE_KEYS = {
@@ -219,48 +225,211 @@ const ProviderStep2 = ({ onNext }: { onNext: (service: string) => void }) => {
     );
 };
 
-const ProviderStep3 = ({ onNext }: { onNext: () => void }) => (
-    <div className="flex flex-col h-full gap-6">
-        <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--primary-500)]/10 flex items-center justify-center text-[var(--primary-500)]">
-            <FileText className="w-6 h-6" />
-        </div>
-        <h2 className="text-[20px] font-800 tracking-tight">Collect / link documents</h2>
-        <p className="text-[14px] text-[var(--muted-foreground)]">Customer will link Aadhaar/PAN via DigiLocker or upload documents.</p>
-        <div className="p-4 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] bg-[var(--muted)]/30 text-center text-[13px] text-[var(--muted-foreground)]">
-            Document upload placeholder
-        </div>
-        <LoKeyButton variant="primary" size="xl" className="w-full mt-auto" onClick={onNext} rightIcon={<ArrowRight className="w-4 h-4" />}>
-            Continue
-        </LoKeyButton>
-    </div>
-);
+const ProviderStep3 = ({ onNext }: { onNext: () => void }) => {
+    const [digilockerAadhaar, setDigilockerAadhaar] = useState(false);
+    const [digilockerPan, setDigilockerPan] = useState(false);
+    const [uploadedAadhaar, setUploadedAadhaar] = useState(false);
+    const [uploadedPan, setUploadedPan] = useState(false);
 
-const ProviderStep4 = ({ onNext }: { onNext: () => void }) => {
-    const [done, setDone] = useState(false);
-    useEffect(() => {
-        const t = setTimeout(() => setDone(true), 2000);
-        return () => clearTimeout(t);
-    }, []);
+    const aadhaarDone = digilockerAadhaar || uploadedAadhaar;
+    const panDone = digilockerPan || uploadedPan;
+    const canContinue = aadhaarDone && panDone;
+
     return (
         <div className="flex flex-col h-full gap-6">
             <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--primary-500)]/10 flex items-center justify-center text-[var(--primary-500)]">
-                <Camera className="w-6 h-6" />
+                <FileText className="w-6 h-6" />
             </div>
-            <h2 className="text-[20px] font-800 tracking-tight">VKYC / Face verification</h2>
-            {!done ? (
-                <div className="flex flex-col items-center gap-4 py-8">
-                    <div className="w-16 h-16 rounded-full border-4 border-[var(--primary-500)] border-t-transparent animate-spin" />
-                    <p className="text-[14px] text-[var(--muted-foreground)]">Initiating VKYC…</p>
+            <h2 className="text-[20px] font-800 tracking-tight">Collect / link documents</h2>
+            <p className="text-[14px] text-[var(--muted-foreground)]">Customer can link Aadhaar and PAN via DigiLocker (preferred) or upload documents manually. Both Aadhaar and PAN are required to continue.</p>
+
+            {/* Panel 1: DigiLocker */}
+            <div className="rounded-[var(--radius-xl)] border-2 border-[var(--border)] bg-[var(--card)] overflow-hidden">
+                <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--muted)]/30 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-[var(--radius-md)] bg-[var(--primary-500)]/10 flex items-center justify-center text-[var(--primary-500)]">
+                        <Link2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h3 className="text-[14px] font-800 text-[var(--neutral-900)]">Link via DigiLocker</h3>
+                        <p className="text-[12px] text-[var(--muted-foreground)]">Fetch Aadhaar & PAN from DigiLocker (verified source)</p>
+                    </div>
                 </div>
-            ) : (
-                <div className="flex items-center gap-3 p-4 rounded-[var(--radius-lg)] bg-[var(--color-success-700)]/10 border border-[var(--color-success-700)]/30">
-                    <CheckCircle2 className="w-6 h-6 text-[var(--color-success-700)] shrink-0" />
-                    <span className="text-[14px] font-700 text-[var(--color-success-700)]">VKYC completed successfully</span>
+                <div className="p-4 space-y-3">
+                    <p className="text-[13px] text-[var(--muted-foreground)]">Customer signs in to DigiLocker; documents are pulled and verified. No manual upload needed.</p>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setDigilockerAadhaar(true)}
+                            className={cn(
+                                "px-3 py-2 rounded-[var(--radius-md)] border text-[13px] font-600 flex items-center gap-2",
+                                digilockerAadhaar ? "border-[var(--color-success-700)] bg-[var(--color-success-700)]/10 text-[var(--color-success-700)]" : "border-[var(--border)] hover:border-[var(--primary-500)]"
+                            )}
+                        >
+                            {digilockerAadhaar ? <CheckCircle2 className="w-4 h-4" /> : <IdCard className="w-4 h-4" />}
+                            Aadhaar {digilockerAadhaar && "linked"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setDigilockerPan(true)}
+                            className={cn(
+                                "px-3 py-2 rounded-[var(--radius-md)] border text-[13px] font-600 flex items-center gap-2",
+                                digilockerPan ? "border-[var(--color-success-700)] bg-[var(--color-success-700)]/10 text-[var(--color-success-700)]" : "border-[var(--border)] hover:border-[var(--primary-500)]"
+                            )}
+                        >
+                            {digilockerPan ? <CheckCircle2 className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+                            PAN {digilockerPan && "linked"}
+                        </button>
+                    </div>
                 </div>
-            )}
-            <LoKeyButton variant="primary" size="xl" className="w-full mt-auto" disabled={!done} onClick={onNext} rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Continue
+            </div>
+
+            {/* Panel 2: Manual upload */}
+            <div className="rounded-[var(--radius-xl)] border-2 border-[var(--border)] bg-[var(--card)] overflow-hidden">
+                <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--muted)]/30 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-[var(--radius-md)] bg-[var(--color-info-600)]/10 flex items-center justify-center text-[var(--color-info-600)]">
+                        <Upload className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h3 className="text-[14px] font-800 text-[var(--neutral-900)]">Upload documents</h3>
+                        <p className="text-[12px] text-[var(--muted-foreground)]">If DigiLocker is not used, upload scanned/photo copies</p>
+                    </div>
+                </div>
+                <div className="p-4 space-y-3">
+                    <p className="text-[13px] text-[var(--muted-foreground)]">Accepted: PDF or image (max 5 MB). Front and back for Aadhaar if required by policy.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setUploadedAadhaar(true)}
+                            className={cn(
+                                "p-4 rounded-[var(--radius-lg)] border-2 border-dashed text-left transition-colors flex items-center gap-3",
+                                uploadedAadhaar ? "border-[var(--color-success-700)] bg-[var(--color-success-700)]/5" : "border-[var(--border)] hover:border-[var(--muted-foreground)]/50 hover:bg-[var(--muted)]/20"
+                            )}
+                        >
+                            {uploadedAadhaar ? <CheckCircle2 className="w-6 h-6 text-[var(--color-success-700)] shrink-0" /> : <IdCard className="w-6 h-6 text-[var(--muted-foreground)] shrink-0" />}
+                            <div>
+                                <p className="text-[13px] font-700 text-[var(--neutral-900)]">Aadhaar</p>
+                                <p className="text-[12px] text-[var(--muted-foreground)]">{uploadedAadhaar ? "Uploaded" : "Click to upload"}</p>
+                            </div>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setUploadedPan(true)}
+                            className={cn(
+                                "p-4 rounded-[var(--radius-lg)] border-2 border-dashed text-left transition-colors flex items-center gap-3",
+                                uploadedPan ? "border-[var(--color-success-700)] bg-[var(--color-success-700)]/5" : "border-[var(--border)] hover:border-[var(--muted-foreground)]/50 hover:bg-[var(--muted)]/20"
+                            )}
+                        >
+                            {uploadedPan ? <CheckCircle2 className="w-6 h-6 text-[var(--color-success-700)] shrink-0" /> : <CreditCard className="w-6 h-6 text-[var(--muted-foreground)] shrink-0" />}
+                            <div>
+                                <p className="text-[13px] font-700 text-[var(--neutral-900)]">PAN</p>
+                                <p className="text-[12px] text-[var(--muted-foreground)]">{uploadedPan ? "Uploaded" : "Click to upload"}</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Panel 3: Document status */}
+            <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--muted)]/20 px-4 py-3">
+                <p className="text-[12px] font-700 uppercase tracking-widest text-[var(--muted-foreground)] mb-2">Document status</p>
+                <ul className="flex flex-col gap-1.5 text-[13px]">
+                    <li className="flex items-center gap-2">
+                        {aadhaarDone ? <CheckCircle2 className="w-4 h-4 text-[var(--color-success-700)] shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-[var(--border)] shrink-0" />}
+                        <span className={aadhaarDone ? "font-600 text-[var(--neutral-900)]" : "text-[var(--muted-foreground)]"}>Aadhaar {aadhaarDone ? "— linked or uploaded" : "— required"}</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                        {panDone ? <CheckCircle2 className="w-4 h-4 text-[var(--color-success-700)] shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-[var(--border)] shrink-0" />}
+                        <span className={panDone ? "font-600 text-[var(--neutral-900)]" : "text-[var(--muted-foreground)]"}>PAN {panDone ? "— linked or uploaded" : "— required"}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <LoKeyButton variant="primary" size="xl" className="w-full mt-auto" onClick={onNext} rightIcon={<ArrowRight className="w-4 h-4" />} disabled={!canContinue}>
+                {canContinue ? "Continue" : "Link or upload Aadhaar and PAN to continue"}
             </LoKeyButton>
+        </div>
+    );
+};
+
+// Same template as normal flow (create-vc FaceCapture): live face frame, status, scan/success
+const ProviderStep4 = ({ onNext }: { onNext: () => void }) => {
+    const [status, setStatus] = useState<"idle" | "scanning" | "success">("idle");
+
+    const startVkyc = () => {
+        setStatus("scanning");
+        const t = setTimeout(() => {
+            setStatus("success");
+        }, 3000);
+        return () => clearTimeout(t);
+    };
+
+    return (
+        <div className="flex flex-col h-full gap-6">
+            <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--primary-500)]/10 flex items-center justify-center text-[var(--primary-500)]">
+                    <Camera className="w-6 h-6" />
+                </div>
+                <h2 className="text-[20px] font-800 tracking-tight">VKYC / Face verification</h2>
+                <p className="text-[14px] text-[var(--muted-foreground)]">
+                    Customer completes live face capture for liveness and 3-way match. Mandatory for anti-fraud.
+                </p>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center py-4 min-h-[200px]">
+                <div className="relative w-48 h-48 md:w-64 md:h-64">
+                    <div className="absolute inset-0 border-4 border-[var(--primary-500)]/30 rounded-full overflow-hidden">
+                        <div className="w-full h-full bg-[var(--neutral-900)] flex items-center justify-center overflow-hidden relative">
+                            <User className="w-32 h-32 md:w-40 md:h-40 text-white/5" />
+                            {status === "scanning" && (
+                                <div className="absolute top-0 left-0 w-full h-2 bg-[var(--primary-500)] shadow-[0_0_15px_var(--primary-500)] animate-scan-y" />
+                            )}
+                            {status === "success" && (
+                                <div className="absolute inset-0 bg-[var(--color-success-700)]/20 flex items-center justify-center animate-in fade-in">
+                                    <CheckCircle2 className="w-16 h-16 md:w-20 md:h-20 text-white" />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[var(--primary-500)] rounded-tl-xl" />
+                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[var(--primary-500)] rounded-tr-xl" />
+                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[var(--primary-500)] rounded-bl-xl" />
+                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[var(--primary-500)] rounded-br-xl" />
+                </div>
+
+                <div className="mt-6 flex flex-col items-center gap-2">
+                    <p className={cn(
+                        "text-[14px] font-700 text-center",
+                        status === "scanning" ? "text-[var(--primary-500)]" : "text-[var(--neutral-900)]"
+                    )}>
+                        {status === "idle" && "Customer centers face in the frame"}
+                        {status === "scanning" && "Verifying liveness… Look straight"}
+                        {status === "success" && "Liveness verified"}
+                    </p>
+                    <div className="flex items-center gap-2 text-[12px] text-[var(--muted-foreground)]">
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>Live encrypted; image used for face match</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-auto pt-4 border-t border-[var(--border)]">
+                {status === "idle" && (
+                    <LoKeyButton variant="primary" size="xl" className="w-full" onClick={startVkyc} leftIcon={<Scan className="w-5 h-5" />}>
+                        Start VKYC
+                    </LoKeyButton>
+                )}
+                {status === "scanning" && (
+                    <div className="flex items-center justify-center gap-2 py-3 text-[14px] font-600 text-[var(--muted-foreground)]">
+                        <div className="w-5 h-5 rounded-full border-2 border-[var(--primary-500)] border-t-transparent animate-spin" />
+                        In progress…
+                    </div>
+                )}
+                {status === "success" && (
+                    <LoKeyButton variant="primary" size="xl" className="w-full" onClick={onNext} rightIcon={<ArrowRight className="w-4 h-4" />}>
+                        Continue
+                    </LoKeyButton>
+                )}
+            </div>
         </div>
     );
 };
@@ -511,8 +680,281 @@ const BankAuditLogScreen = () => {
 const BANK_NAV_ITEMS = [
     { key: "portal", label: "Portal home", icon: Home },
     { key: "sent", label: "Security", icon: History },
+    { key: "users", label: "Users", icon: Search },
     { key: "audit", label: "Audit log", icon: Clock },
 ].map(({ key, label, icon }) => ({ key, label, icon }));
+
+// Dummy values for VP attributes (placeholder when card is flipped)
+const ATTRIBUTE_DUMMY_VALUES: Record<string, string> = {
+    "Full Name": "Ammar Khan",
+    "Aadhaar Number": "XXXX XXXX 1234",
+    "PAN Card": "ABCDE1234F",
+    "Date of Birth": "15 Jan 1990",
+    "Phone": "+91 98765 43210",
+    "Current Address": "123, Sample Lane, Mumbai",
+};
+
+// Flip card for one attribute: front = name, back = value (click to flip)
+const AttributeFlipCard = ({
+    fieldName,
+    userId,
+    flipped,
+    onFlip,
+}: {
+    fieldName: string;
+    userId: string;
+    flipped: boolean;
+    onFlip: () => void;
+}) => {
+    const value = ATTRIBUTE_DUMMY_VALUES[fieldName] ?? "—";
+    return (
+        <button
+            type="button"
+            onClick={onFlip}
+            className="relative w-[140px] h-[72px] rounded-[var(--radius-lg)] border-2 border-[var(--border)] bg-[var(--card)] overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--primary-500)] focus:ring-offset-2 [perspective:400px]"
+        >
+            <div
+                className="relative w-full h-full transition-transform duration-300 [transform-style:preserve-3d]"
+                style={{ transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
+            >
+                <div className="absolute inset-0 flex items-center justify-center p-2 [backface-visibility:hidden] bg-[var(--color-success-700)]/10 border-[var(--color-success-700)]/30 rounded-[var(--radius-md)]">
+                    <span className="text-[12px] font-700 text-[var(--color-success-700)] text-center leading-tight">{fieldName}</span>
+                </div>
+                <div
+                    className="absolute inset-0 flex items-center justify-center p-2 [backface-visibility:hidden] bg-[var(--primary-500)]/10 rounded-[var(--radius-md)]"
+                    style={{ transform: "rotateY(180deg)" }}
+                >
+                    <span className="text-[12px] font-600 text-[var(--neutral-900)] text-center leading-tight break-words line-clamp-2">{value}</span>
+                </div>
+            </div>
+        </button>
+    );
+};
+
+// --- Users with granted access: searchable list, top users, creds visibility ---
+type UserGrantSummary = {
+    userId: string;
+    fields: string[];
+    lastGranted: string;
+    purposes: string[];
+    requestCount: number;
+};
+
+function getUsersWithGrantedAccess(bankName: string): UserGrantSummary[] {
+    const stored = localStorage.getItem("kavach_kyc_requests");
+    if (!stored) return [];
+    const all: KYCRequest[] = JSON.parse(stored);
+    const granted = all.filter((r) => r.org === bankName && r.status === "granted");
+    const byUser = new Map<string, { fields: Set<string>; lastGranted: string; purposes: string[] }>();
+    for (const r of granted) {
+        const id = r.targetKavachId?.trim() || "Unknown user";
+        const existing = byUser.get(id);
+        const fields = new Set(r.fields || []);
+        const lastGranted = r.timestamp || "";
+        const purpose = r.purpose ? r.purpose : "";
+        if (existing) {
+            r.fields?.forEach((f) => existing.fields.add(f));
+            if (purpose) existing.purposes.push(purpose);
+            if (lastGranted && (!existing.lastGranted || lastGranted > existing.lastGranted)) existing.lastGranted = lastGranted;
+        } else {
+            byUser.set(id, { fields, lastGranted, purposes: purpose ? [purpose] : [] });
+        }
+    }
+    return Array.from(byUser.entries()).map(([userId, data]) => ({
+        userId,
+        fields: Array.from(data.fields),
+        lastGranted: data.lastGranted,
+        purposes: data.purposes.filter(Boolean),
+        requestCount: granted.filter((r) => (r.targetKavachId?.trim() || "Unknown user") === userId).length,
+    }));
+}
+
+const BankUsersSearchScreen = ({
+    bankName,
+    onNavClick,
+    onLogout,
+}: {
+    bankName: string;
+    onNavClick: (key: string) => void;
+    onLogout: () => void;
+}) => {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [users, setUsers] = useState<UserGrantSummary[]>([]);
+    const [selectedUser, setSelectedUser] = useState<UserGrantSummary | null>(null);
+    const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
+
+    const toggleFlip = (fieldName: string) => {
+        setFlippedCards((prev) => {
+            const next = new Set(prev);
+            if (next.has(fieldName)) next.delete(fieldName);
+            else next.add(fieldName);
+            return next;
+        });
+    };
+
+    const refresh = () => {
+        const list = getUsersWithGrantedAccess(bankName);
+        list.sort((a, b) => (b.lastGranted || "").localeCompare(a.lastGranted || ""));
+        setUsers(list);
+    };
+
+    useEffect(() => {
+        refresh();
+    }, [bankName]);
+
+    useEffect(() => {
+        const interval = setInterval(refresh, 3000);
+        return () => clearInterval(interval);
+    }, [bankName]);
+
+    const filtered = searchQuery.trim()
+        ? users.filter((u) => u.userId.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+        : users;
+
+    // Single user view: clickable VP flip cards
+    if (selectedUser) {
+        return (
+            <BankLayout currentPage="users" bankName={bankName} navItems={BANK_NAV_ITEMS} onNavClick={onNavClick} onLogout={onLogout}>
+                <div className="p-6">
+                    <PageHeader
+                        title={selectedUser.userId}
+                        breadcrumbs={[{ label: "Bank Portal" }, { label: "Users" }, { label: selectedUser.userId }]}
+                        actions={
+                            <LoKeyButton variant="ghost" size="s" onClick={() => setSelectedUser(null)} leftIcon={<ChevronLeft className="w-4 h-4" />}>
+                                Back to list
+                            </LoKeyButton>
+                        }
+                    />
+                    <main className="max-w-4xl mx-auto mt-6 flex flex-col gap-6">
+                        <div className="flex items-center gap-3 p-4 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--card)]">
+                            <div className="w-12 h-12 rounded-[var(--radius-lg)] bg-[var(--primary-500)]/10 flex items-center justify-center text-[var(--primary-500)]">
+                                <User className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="text-[16px] font-800 text-[var(--neutral-900)]">{selectedUser.userId}</p>
+                                <p className="text-[13px] text-[var(--muted-foreground)]">
+                                    {selectedUser.requestCount} grant{selectedUser.requestCount !== 1 ? "s" : ""} · last {selectedUser.lastGranted || "—"}
+                                </p>
+                                {selectedUser.purposes.length > 0 && (
+                                    <p className="text-[12px] text-[var(--muted-foreground)] mt-1">
+                                        Purpose{selectedUser.purposes.length !== 1 ? "s" : ""}: {selectedUser.purposes.slice(0, 3).join(", ")}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-[12px] font-700 uppercase tracking-widest text-[var(--muted-foreground)] mb-3">VP attributes — click card to reveal value</p>
+                            <div className="flex flex-wrap gap-3">
+                                {selectedUser.fields.length ? (
+                                    selectedUser.fields.map((f) => (
+                                        <AttributeFlipCard
+                                            key={f}
+                                            fieldName={f}
+                                            userId={selectedUser.userId}
+                                            flipped={flippedCards.has(f)}
+                                            onFlip={() => toggleFlip(f)}
+                                        />
+                                    ))
+                                ) : (
+                                    <span className="text-[13px] text-[var(--muted-foreground)]">No attributes</span>
+                                )}
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </BankLayout>
+        );
+    }
+
+    // Main list: cards with badges (click card to open single user view)
+    return (
+        <BankLayout currentPage="users" bankName={bankName} navItems={BANK_NAV_ITEMS} onNavClick={onNavClick} onLogout={onLogout}>
+            <div className="p-6">
+                <PageHeader
+                    title="Users"
+                    breadcrumbs={[{ label: "Bank Portal" }, { label: "Users" }]}
+                />
+                <main className="max-w-4xl mx-auto mt-6 flex flex-col gap-6">
+                    <p className="text-[14px] text-[var(--muted-foreground)]">
+                        Search users who have granted your bank access. Click a user card to view their VP attributes.
+                    </p>
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted-foreground)]" />
+                        <input
+                            type="search"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search by Kavach DID or user ID (e.g. ammar@kavach)"
+                            className="w-full pl-11 pr-4 py-3 rounded-[var(--radius-lg)] border-2 border-[var(--border)] focus:border-[var(--primary-500)] outline-none text-[14px]"
+                        />
+                    </div>
+                    {filtered.length === 0 ? (
+                        <div className="p-12 text-center bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius-xl)]">
+                            <User className="w-12 h-12 mx-auto text-[var(--muted-foreground)] mb-4" />
+                            <p className="text-[15px] font-700 text-[var(--neutral-900)]">
+                                {searchQuery.trim() ? "No users match your search" : "No users with granted access yet"}
+                            </p>
+                            <p className="text-[13px] text-[var(--muted-foreground)] mt-1">
+                                {searchQuery.trim() ? "Try a different search term." : "When users grant your KYC requests (Security), they will appear here."}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <h3 className="text-[12px] font-800 uppercase tracking-widest text-[var(--muted-foreground)]">
+                                Top users · granted access ({filtered.length})
+                            </h3>
+                            <ul className="flex flex-col gap-3">
+                                {filtered.map((u) => (
+                                    <li
+                                        key={u.userId}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => setSelectedUser(u)}
+                                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedUser(u); } }}
+                                        className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius-xl)] p-4 flex flex-col gap-3 cursor-pointer hover:border-[var(--primary-500)]/50 hover:shadow-elevation-sm transition-all"
+                                    >
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-9 h-9 rounded-[var(--radius-md)] bg-[var(--primary-500)]/10 flex items-center justify-center text-[var(--primary-500)]">
+                                                    <User className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[14px] font-800 text-[var(--neutral-900)]">{u.userId}</p>
+                                                    <p className="text-[12px] text-[var(--muted-foreground)]">
+                                                        {u.requestCount} grant{u.requestCount !== 1 ? "s" : ""} · last {u.lastGranted || "—"}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <ArrowRight className="w-5 h-5 text-[var(--muted-foreground)] shrink-0" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-700 uppercase tracking-widest text-[var(--muted-foreground)] mb-1.5">Granted credentials / attributes</p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {u.fields.length ? u.fields.map((f) => (
+                                                    <span key={f} className="px-2 py-1 rounded-[var(--radius-sm)] bg-[var(--color-success-700)]/10 text-[var(--color-success-700)] text-[12px] font-600">
+                                                        {f}
+                                                    </span>
+                                                )) : (
+                                                    <span className="text-[12px] text-[var(--muted-foreground)]">—</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {u.purposes.length > 0 && (
+                                            <p className="text-[11px] text-[var(--muted-foreground)]">
+                                                Purpose{u.purposes.length !== 1 ? "s" : ""}: {u.purposes.slice(0, 2).join(", ")}
+                                                {u.purposes.length > 2 ? ` +${u.purposes.length - 2}` : ""}
+                                            </p>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </main>
+            </div>
+        </BankLayout>
+    );
+};
 
 // --- KYC Seeker: Sent requests list ---
 const SeekerSentList = ({
@@ -907,7 +1349,7 @@ const SeekerManualKycScreen = ({ onBack }: { onBack: () => void }) => (
 function BankContent() {
     const [loggedIn, setLoggedIn] = useState(false);
     const [bankName, setBankName] = useState("");
-    const [view, setView] = useState<"portal" | "provider" | "seeker">("portal");
+    const [view, setView] = useState<"portal" | "provider" | "seeker" | "users">("portal");
     const [providerStep, setProviderStep] = useState(1);
     const [providerCustomerId, setProviderCustomerId] = useState("");
     const [seekerView, setSeekerView] = useState<"create" | "sent" | "audit" | "checks" | "success" | "rekyc" | "manual_kyc">("create");
@@ -933,6 +1375,7 @@ function BankContent() {
     const handleBankNav = (key: string) => {
         if (key === "portal") setView("portal");
         else if (key === "sent") setSeekerView("sent");
+        else if (key === "users") setView("users");
         else if (key === "audit") setSeekerView("audit");
     };
 
@@ -964,6 +1407,16 @@ function BankContent() {
                 {providerStep === 7 && <ProviderStep7PublishLedger onNext={() => { setProviderStep(8); addBankAuditLog("KYC Provider", "VC published to ledger"); }} />}
                 {providerStep === 8 && <ProviderStep8Success onBackToPortal={() => { setView("portal"); setProviderStep(1); }} />}
             </OnboardingLayout>
+        );
+    }
+
+    if (view === "users") {
+        return (
+            <BankUsersSearchScreen
+                bankName={bankName}
+                onNavClick={handleBankNav}
+                onLogout={handleLogout}
+            />
         );
     }
 
