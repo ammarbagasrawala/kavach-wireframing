@@ -35,6 +35,7 @@ interface KYCRequest {
     retention: string;
     timestamp: string;
     status: "pending" | "granted" | "denied" | "revoked";
+    targetKavachId?: string;
 }
 
 export default function RequestsPage() {
@@ -45,11 +46,16 @@ export default function RequestsPage() {
 
     useEffect(() => {
         const id = localStorage.getItem("kavach_user_id");
-        if (id) setKavachId(id);
+        const userId = id || "ammar@kavach";
+        if (id) setKavachId(userId);
 
         const stored = localStorage.getItem("kavach_kyc_requests");
         if (stored) {
-            setRequests(JSON.parse(stored));
+            const all: KYCRequest[] = JSON.parse(stored);
+            const filtered = all.filter(
+                (req) => !req.targetKavachId || req.targetKavachId === userId
+            );
+            setRequests(filtered);
         } else {
             const initialRequests: KYCRequest[] = [
                 {
@@ -98,15 +104,22 @@ export default function RequestsPage() {
         }
     }, []);
 
+    const userId = kavachId;
+
     const handleAction = (id: string, action: "granted" | "denied" | "revoked") => {
         setLoadingAction(id + "_" + action);
 
         setTimeout(() => {
-            const updatedRequests = requests.map(req =>
+            const stored = localStorage.getItem("kavach_kyc_requests");
+            const fullList: KYCRequest[] = stored ? JSON.parse(stored) : [];
+            const updatedFull = fullList.map(req =>
                 req.id === id ? { ...req, status: action, timestamp: action === "revoked" ? "Just now" : req.timestamp } : req
             );
-            setRequests(updatedRequests);
-            localStorage.setItem("kavach_kyc_requests", JSON.stringify(updatedRequests));
+            localStorage.setItem("kavach_kyc_requests", JSON.stringify(updatedFull));
+            const filtered = updatedFull.filter(
+                (req) => !req.targetKavachId || req.targetKavachId === userId
+            );
+            setRequests(filtered);
 
             // Logic for audit logging
             const targetReq = requests.find(r => r.id === id);

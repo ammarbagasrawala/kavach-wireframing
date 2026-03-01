@@ -15,7 +15,8 @@ import {
   LayoutDashboard,
   Globe,
   Fingerprint,
-  Zap
+  Zap,
+  Building2
 } from "lucide-react";
 
 const FlowCard = ({ title, description, items, icon: Icon, color }: any) => (
@@ -99,6 +100,17 @@ export default function NavigatorPage() {
         { label: "KYC Requests Hub", icon: ShieldAlert, href: "/requests" },
         { label: "Selective Disclosure", icon: UserRoundCheck, href: "/requests" },
       ]
+    },
+    {
+      title: "Bank KYC Portal",
+      description: "Bank official portal: KYC Provider (perform KYC / issue credentials) or KYC Seeker (request attributes from user, run verification).",
+      icon: Building2,
+      color: "bg-[var(--color-info-600)]",
+      items: [
+        { label: "Bank Portal (official login)", icon: Building2, href: "/bank" },
+        { label: "KYC Provider flow", icon: ShieldCheck, href: "/bank" },
+        { label: "KYC Seeker flow", icon: FileText, href: "/bank" },
+      ]
     }
   ];
 
@@ -145,6 +157,15 @@ export default function NavigatorPage() {
               rightIcon={<ArrowRight className="w-5 h-5" />}
             >
               Enter App Simulation
+            </LoKeyButton>
+            <LoKeyButton
+              variant="secondary"
+              size="xxl"
+              className="px-10 h-16 text-[16px]"
+              onClick={() => window.location.href = "/bank"}
+              rightIcon={<Building2 className="w-5 h-5" />}
+            >
+              Start Bank KYC Flow
             </LoKeyButton>
             <div className="flex items-center gap-3">
               <LoKeyButton

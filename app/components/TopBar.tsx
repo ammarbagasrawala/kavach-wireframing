@@ -7,9 +7,17 @@ import { User, Bell, Search, ChevronRight } from "lucide-react";
 interface TopBarProps {
     productName?: string;
     className?: string;
+    /** When set (e.g. bank portal), show this instead of default user name/initials */
+    userLabel?: string;
+    userSubLabel?: string;
+    userInitials?: string;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ productName = "KAVACH", className }) => {
+const TopBar: React.FC<TopBarProps> = ({ productName = "KAVACH", className, userLabel, userSubLabel, userInitials }) => {
+    const displayLabel = userLabel ?? "Ammar B.";
+    const displaySub = userSubLabel ?? "Administrator";
+    const displayInitials = userInitials ?? "AB";
+
     return (
         <header className={cn("h-[56px] border-b border-[var(--border)] bg-[var(--card)] px-6 flex items-center justify-between shrink-0 z-10", className)}>
             <div className="flex items-center gap-4">
@@ -29,11 +37,11 @@ const TopBar: React.FC<TopBarProps> = ({ productName = "KAVACH", className }) =>
                 <div className="w-[1px] h-6 bg-[var(--border)] mx-2"></div>
                 <div className="flex items-center gap-3 pl-2">
                     <div className="flex flex-col items-end">
-                        <span className="text-[14px] font-600 leading-none">Ammar B.</span>
-                        <span className="text-[12px] text-[var(--muted-foreground)]">Administrator</span>
+                        <span className="text-[14px] font-600 leading-none">{displayLabel}</span>
+                        <span className="text-[12px] text-[var(--muted-foreground)]">{displaySub}</span>
                     </div>
                     <div className="w-9 h-9 rounded-full bg-[color-mix(in_srgb,var(--primary-500)_12%,transparent)] flex items-center justify-center text-[var(--primary-500)] font-600">
-                        AB
+                        {displayInitials}
                     </div>
                 </div>
             </div>
