@@ -90,6 +90,7 @@ export default function Layout({ children, currentPage = "Dashboard", productNam
         { label: "Requests", icon: History, href: "/requests", badge: requestCount },
         { label: "Manage Credentials", icon: ShieldCheck, href: "/credentials" },
         { label: "Audit Logs", icon: Clock, href: "/audit-logs" },
+        { label: "Nominees", icon: UserRoundCheck, href: "/nominees" },
         { label: "Navigator", icon: Layers, href: "/" },
     ];
 

@@ -24,7 +24,8 @@ import {
     Info,
     CheckCircle2,
     X,
-    User
+    User,
+    Hash
 } from "lucide-react";
 import { addAuditLog } from "../components/AuditLogger";
 
@@ -37,6 +38,8 @@ export default function DashboardPage() {
     const [showVkycModal, setShowVkycModal] = useState(false);
     const [vkycStep, setVkycStep] = useState<"prompt" | "connecting" | "success">("prompt");
     const [kavachId, setKavachId] = useState<string | null>(null);
+    const [mismatches, setMismatches] = useState<any[]>([]);
+    const [showMismatchModal, setShowMismatchModal] = useState(false);
 
     useEffect(() => {
         const isPending = localStorage.getItem("kavach_pending_kyc") === "true";
@@ -63,6 +66,27 @@ export default function DashboardPage() {
             ];
             setAuditLogs(defaultLogs);
             localStorage.setItem("kavach_audit_logs", JSON.stringify(defaultLogs));
+        }
+
+        // Integrity Check Simulation
+        if (isVerified) {
+            const detected = [
+                {
+                    field: "Full Name",
+                    aadhaar: "Ammar B.",
+                    pan: "AMMAR BAGASRAWALA",
+                    severity: "medium",
+                    impact: "May cause rejection in high-value loan applications."
+                },
+                {
+                    field: "Primary Address",
+                    aadhaar: "Mumbai, Maharashtra, 400001",
+                    pan: "NOT FOUND",
+                    severity: "high",
+                    impact: "Mandatory for address verification in credit card issuance."
+                }
+            ];
+            setMismatches(detected);
         }
     }, []);
 
@@ -148,7 +172,7 @@ export default function DashboardPage() {
                 )}
 
                 {/* Success Banner (Unlocked State) */}
-                {verified && (
+                {verified && mismatches.length === 0 && (
                     <div className="mb-6 p-4 md:p-6 rounded-[var(--radius-xl)] bg-[var(--color-success-700)]/10 border border-[var(--color-success-700)] flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-6">
                         <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[var(--color-success-700)] flex items-center justify-center text-white shrink-0">
                             <ShieldCheck className="w-6 h-6 md:w-8 md:h-8" />
@@ -160,6 +184,38 @@ export default function DashboardPage() {
                         <LoKeyButton variant="tertiary" size="l" className="w-full md:w-auto" leftIcon={<ShieldCheck className="w-4 h-4" />} onClick={() => window.location.href = "/credentials"}>
                             Manage Now
                         </LoKeyButton>
+                    </div>
+                )}
+
+                {/* Identity Health Insight Widget */}
+                {verified && mismatches.length > 0 && (
+                    <div className="mb-8 p-4 md:p-5 rounded-[var(--radius-xl)] bg-white border border-[var(--border)] shadow-elevation-sm relative overflow-hidden group">
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-[var(--color-error-600)]"></div>
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-[var(--color-error-600)]/10 flex items-center justify-center text-[var(--color-error-600)] shrink-0">
+                                    <ShieldAlert className="w-6 h-6 animate-pulse" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-[16px] font-800 text-[var(--neutral-900)]">Identity Integrity Alert</h3>
+                                        <span className="px-2 py-0.5 bg-[var(--color-error-600)]/10 text-[var(--color-error-600)] text-[9px] font-900 uppercase tracking-wider rounded">Insight</span>
+                                    </div>
+                                    <p className="text-[13px] text-[var(--muted-foreground)] max-w-xl">
+                                        We detected <strong className="text-[var(--neutral-900)]">{mismatches.length} discrepancies</strong> between your Aadhaar and PAN records. This could block institutional KYC for loans or banking.
+                                    </p>
+                                </div>
+                            </div>
+                            <LoKeyButton
+                                variant="tertiary"
+                                size="m"
+                                className="w-full md:w-auto border-[var(--color-error-600)]/20 hover:bg-[var(--color-error-600)]/5 text-[var(--color-error-600)]"
+                                onClick={() => setShowMismatchModal(true)}
+                                rightIcon={<ArrowRight className="w-4 h-4" />}
+                            >
+                                Review Mismatches
+                            </LoKeyButton>
+                        </div>
                     </div>
                 )}
 
@@ -298,63 +354,144 @@ export default function DashboardPage() {
                 </div>
             </main>
             {/* VKYC Resume Modal */}
-            {showVkycModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <div className="bg-[var(--background)] w-full max-w-[500px] max-h-[90vh] rounded-[var(--radius-2xl)] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300">
-                        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]">
-                            <span className="text-[12px] font-800 uppercase tracking-widest text-[var(--muted-foreground)]">Identity Verification</span>
-                            <button onClick={() => setShowVkycModal(false)} className="p-2 hover:bg-[var(--muted)] rounded-full transition-colors">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-6 md:p-8">
-                            {vkycStep === "prompt" && (
-                                <VKYCPrompt
-                                    onConnect={() => {
-                                        addAuditLog("VKYC Initiated", "Connect to agent request from Dashboard");
-                                        setVkycStep("connecting");
-                                    }}
-                                    onSchedule={(date: string) => {
-                                        localStorage.setItem("kavach_vkyc_date", date);
-                                        setVkycDate(date);
-                                        addAuditLog("VKYC Scheduled", `Verification call confirmed for ${date}`, "Info");
-                                        setShowVkycModal(false);
-                                    }}
-                                    onSkip={() => {
-                                        addAuditLog("VKYC Deferred", "User opted to postpone verification from Dashboard", "Warning");
-                                        setShowVkycModal(false);
-                                    }}
-                                />
-                            )}
-                            {vkycStep === "connecting" && (
-                                <VKYCSimulation
-                                    onComplete={() => {
-                                        setVkycStep("success");
-                                        localStorage.setItem("kavach_identity_verified", "true");
-                                        localStorage.removeItem("kavach_pending_kyc");
-                                        addAuditLog("Identity Fully Verified", "Account successfully activated via Video KYC");
-                                        setTimeout(() => {
-                                            window.location.reload();
-                                        }, 1500);
-                                    }}
-                                />
-                            )}
-                            {vkycStep === "success" && (
-                                <div className="flex flex-col items-center justify-center py-12 text-center gap-6">
-                                    <div className="w-20 h-20 rounded-full bg-[var(--color-success-700)]/10 flex items-center justify-center text-[var(--color-success-700)]">
-                                        <ShieldCheck className="w-10 h-10" />
+            {
+                showVkycModal && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                        <div className="bg-[var(--background)] w-full max-w-[500px] max-h-[90vh] rounded-[var(--radius-2xl)] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300">
+                            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]">
+                                <span className="text-[12px] font-800 uppercase tracking-widest text-[var(--muted-foreground)]">Identity Verification</span>
+                                <button onClick={() => setShowVkycModal(false)} className="p-2 hover:bg-[var(--muted)] rounded-full transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-6 md:p-8">
+                                {vkycStep === "prompt" && (
+                                    <VKYCPrompt
+                                        onConnect={() => {
+                                            addAuditLog("VKYC Initiated", "Connect to agent request from Dashboard");
+                                            setVkycStep("connecting");
+                                        }}
+                                        onSchedule={(date: string) => {
+                                            localStorage.setItem("kavach_vkyc_date", date);
+                                            setVkycDate(date);
+                                            addAuditLog("VKYC Scheduled", `Verification call confirmed for ${date}`, "Info");
+                                            setShowVkycModal(false);
+                                        }}
+                                        onSkip={() => {
+                                            addAuditLog("VKYC Deferred", "User opted to postpone verification from Dashboard", "Warning");
+                                            setShowVkycModal(false);
+                                        }}
+                                    />
+                                )}
+                                {vkycStep === "connecting" && (
+                                    <VKYCSimulation
+                                        onComplete={() => {
+                                            setVkycStep("success");
+                                            localStorage.setItem("kavach_identity_verified", "true");
+                                            localStorage.removeItem("kavach_pending_kyc");
+                                            addAuditLog("Identity Fully Verified", "Account successfully activated via Video KYC");
+                                            setTimeout(() => {
+                                                window.location.reload();
+                                            }, 1500);
+                                        }}
+                                    />
+                                )}
+                                {vkycStep === "success" && (
+                                    <div className="flex flex-col items-center justify-center py-12 text-center gap-6">
+                                        <div className="w-20 h-20 rounded-full bg-[var(--color-success-700)]/10 flex items-center justify-center text-[var(--color-success-700)]">
+                                            <ShieldCheck className="w-10 h-10" />
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                            <h2 className="text-[20px] font-800">Verification Complete</h2>
+                                            <p className="text-[14px] text-[var(--muted-foreground)]">Your identity has been verified and credentials unlocked.</p>
+                                        </div>
                                     </div>
-                                    <div className="flex flex-col gap-2">
-                                        <h2 className="text-[20px] font-800">Verification Complete</h2>
-                                        <p className="text-[14px] text-[var(--muted-foreground)]">Your identity has been verified and credentials unlocked.</p>
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </Layout>
+                )
+            }
+            {/* Mismatch Review Modal */}
+            {
+                showMismatchModal && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                        <div className="bg-[var(--background)] w-full max-w-[600px] max-h-[90vh] rounded-[var(--radius-2xl)] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-[var(--border)]">
+                            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]">
+                                <div className="flex items-center gap-2">
+                                    <ShieldAlert className="w-5 h-5 text-[var(--color-error-600)]" />
+                                    <span className="text-[12px] font-800 uppercase tracking-widest text-[var(--neutral-900)]">Identity Integrity Review</span>
+                                </div>
+                                <button onClick={() => setShowMismatchModal(false)} className="p-2 hover:bg-[var(--muted)] rounded-full transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+                                <div className="flex flex-col gap-2">
+                                    <h3 className="text-[20px] font-800 tracking-tight">Data Discrepancies Detected</h3>
+                                    <p className="text-[13px] text-[var(--muted-foreground)]">Kavach cross-referenced your cryptographically signed VCs and found the following inconsistencies.</p>
+                                </div>
+
+                                <div className="flex flex-col gap-4">
+                                    {mismatches.map((m, i) => (
+                                        <div key={i} className="p-4 rounded-[var(--radius-xl)] bg-[var(--muted)]/30 border border-[var(--border)] flex flex-col gap-4">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[11px] font-900 uppercase tracking-widest text-[var(--muted-foreground)]">Attribute: {m.field}</span>
+                                                <span className={cn(
+                                                    "px-2 py-0.5 rounded text-[9px] font-900 uppercase",
+                                                    m.severity === 'high' ? "bg-[var(--color-error-600)]/10 text-[var(--color-error-600)]" : "bg-[var(--color-warning-600)]/10 text-[var(--color-warning-600)]"
+                                                )}>
+                                                    {m.severity} Severity
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[10px] font-800 text-[var(--muted-foreground)] inline-flex items-center gap-1">
+                                                        <FileText className="w-3 h-3" /> Aadhaar Record
+                                                    </span>
+                                                    <span className="text-[13px] font-700 text-[var(--neutral-900)]">{m.aadhaar}</span>
+                                                </div>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[10px] font-800 text-[var(--muted-foreground)] inline-flex items-center gap-1">
+                                                        <Hash className="w-3 h-3" /> PAN Record
+                                                    </span>
+                                                    <span className="text-[13px] font-700 text-[var(--neutral-900)]">{m.pan}</span>
+                                                </div>
+                                            </div>
+                                            <div className="p-3 bg-[var(--color-info-600)]/5 border border-[var(--color-info-600)]/10 rounded-[var(--radius-lg)] flex gap-2">
+                                                <Info className="w-4 h-4 text-[var(--color-info-600)] shrink-0 mt-0.5" />
+                                                <p className="text-[11px] text-[var(--color-info-600)] font-600 leading-snug">
+                                                    <strong>KYC Impact:</strong> {m.impact}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="p-4 rounded-[var(--radius-xl)] bg-[var(--primary-500)]/5 border border-[var(--primary-500)]/20 flex flex-col gap-3">
+                                    <h4 className="text-[14px] font-800 text-[var(--primary-600)]">Recommended Action</h4>
+                                    <ol className="flex flex-col gap-2 list-decimal list-inside">
+                                        <li className="text-[12px] text-[var(--muted-foreground)]">Update your PAN record at UTITSL/NSDL to match Aadhaar name.</li>
+                                        <li className="text-[12px] text-[var(--muted-foreground)]">Re-fetch your digital PAN into Kavach.</li>
+                                    </ol>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-[var(--card)] border-t border-[var(--border)] flex gap-3">
+                                <LoKeyButton variant="primary" size="l" className="flex-1" onClick={() => setShowMismatchModal(false)}>
+                                    I Understand
+                                </LoKeyButton>
+                                <LoKeyButton variant="tertiary" size="l" onClick={() => {
+                                    addAuditLog("Mismatch Acknowledged", "User reviewed and acknowledged data discrepancies between Aadhaar and PAN", "Info");
+                                    setShowMismatchModal(false);
+                                }}>
+                                    Acknowledge & Log
+                                </LoKeyButton>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </Layout >
     );
 }
 
