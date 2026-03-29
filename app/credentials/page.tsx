@@ -40,6 +40,11 @@ export default function CredentialsPage() {
     const [verified, setVerified] = useState(false);
     const [kavachId, setKavachId] = useState<string>("ammar@kavach");
 
+    // Real identity data from the IDfy / CKYCR fetch flows
+    const [adharData, setAdharData] = useState<Record<string, string> | null>(null);
+    const [panData, setPanData] = useState<Record<string, string> | null>(null);
+    const [ckycData, setCkycData] = useState<Record<string, string> | null>(null);
+
     useEffect(() => {
         const id = localStorage.getItem("kavach_user_id");
         if (id) setKavachId(id);
@@ -51,7 +56,43 @@ export default function CredentialsPage() {
 
         const issued = localStorage.getItem("kavach_issued_docs");
         if (issued) setIssuedDocs(JSON.parse(issued));
+
+        // Load real identity data from sessionStorage
+        try {
+            const adharRaw = sessionStorage.getItem("kavach_idfy_adhar_data");
+            if (adharRaw) {
+                const parsed = JSON.parse(adharRaw)?.parsed_details || {};
+                setAdharData({
+                    "UID Number": parsed.uid ? `XXXX-XXXX-${parsed.uid.slice(-4)}` : "XXXX-XXXX-XXXX",
+                    "Full Name": parsed.name || "—",
+                    "DOB": parsed.dob || "—",
+                    "Gender": parsed.gender || "—",
+                    ...(parsed.vtc ? { "City": `${parsed.vtc}${parsed.state ? ", " + parsed.state : ""}` } : {}),
+                });
+            }
+            const panRaw = sessionStorage.getItem("kavach_idfy_pan_data");
+            if (panRaw) {
+                const parsed = JSON.parse(panRaw)?.parsed_details || {};
+                setPanData({
+                    "PAN Number": parsed.pan_no || "—",
+                    "Cardholder": parsed.name || "—",
+                    "DOB": parsed.dob || "—",
+                    "Category": "Individual",
+                });
+            }
+            const ckycRaw = sessionStorage.getItem("kavach_ckycr_data");
+            if (ckycRaw) {
+                const parsed = JSON.parse(ckycRaw);
+                setCkycData({
+                    "CKYC Number": parsed.ckyc_no || "—",
+                    "KYC Date": parsed.kyc_date || "—",
+                    "PAN": parsed.pan || "—",
+                    "Status": "Verified",
+                });
+            }
+        } catch { /* sessionStorage may be unavailable (SSR) */ }
     }, []);
+
 
     const handleDelete = (id: string, isIssued: boolean) => {
         if (isIssued) {
@@ -217,11 +258,11 @@ export default function CredentialsPage() {
                                     type="Identity"
                                     theme="aadhaar"
                                     icon={<ShieldCheck />}
-                                    data={{
-                                        "UID Number": "XXXX-XXXX-9021",
-                                        "Full Name": "Ammar B.",
-                                        "DOB": "12-05-1995",
-                                        "Address": "Mumbai, Maharashtra, 400001"
+                                    data={adharData || {
+                                        "UID Number": "XXXX-XXXX-XXXX",
+                                        "Full Name": "Not yet fetched",
+                                        "DOB": "—",
+                                        "Gender": "—",
                                     }}
                                     isExpanded={showPlain === "aadhaar"}
                                     onToggle={() => setShowPlain(showPlain === "aadhaar" ? null : "aadhaar")}
@@ -238,11 +279,11 @@ export default function CredentialsPage() {
                                     type="Tax"
                                     theme="pan"
                                     icon={<FileText />}
-                                    data={{
-                                        "PAN Number": "ABCDE1234F",
-                                        "Cardholder": "AMMAR BAGASRAWALA",
+                                    data={panData || {
+                                        "PAN Number": "—",
+                                        "Cardholder": "Not yet fetched",
+                                        "DOB": "—",
                                         "Category": "Individual",
-                                        "Issued": "Jan 2018"
                                     }}
                                     isExpanded={showPlain === "pan"}
                                     onToggle={() => setShowPlain(showPlain === "pan" ? null : "pan")}
@@ -301,11 +342,11 @@ export default function CredentialsPage() {
                                     type="KYC"
                                     theme="blue"
                                     icon={<ShieldCheck />}
-                                    data={{
-                                        "CKYC Number": "40023910022",
-                                        "KYC Date": "10/02/2024",
-                                        "Auth Source": "Bank of Baroda",
-                                        "Status": "Verified"
+                                    data={ckycData || {
+                                        "CKYC Number": "—",
+                                        "KYC Date": "—",
+                                        "PAN": "—",
+                                        "Status": "Not yet fetched",
                                     }}
                                     isExpanded={showPlain === "ckycr"}
                                     onToggle={() => setShowPlain(showPlain === "ckycr" ? null : "ckycr")}

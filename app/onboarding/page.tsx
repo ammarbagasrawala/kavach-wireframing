@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import OnboardingLayout from "../components/OnboardingLayout";
 import LoKeyButton from "../components/LoKeyButton";
 import { cn } from "../components/LoKeyButton";
@@ -23,7 +23,8 @@ import {
     Zap,
     Lock as LockIcon,
     Cpu,
-    ScanFace
+    ScanFace,
+    AlertCircle
 } from "lucide-react";
 import { addAuditLog } from "../components/AuditLogger";
 
@@ -132,6 +133,29 @@ const AssistedSetup = ({ onBack, onComplete }: any) => (
 
 const PhoneInput = ({ onNext, isLogin }: any) => {
     const [phone, setPhone] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleNext = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/send-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone })
+            });
+            const data = await res.json();
+            if (data.success) {
+                onNext(phone);
+            } else {
+                alert(data.error || 'Failed to send OTP');
+            }
+        } catch (e) {
+            alert('Network error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full gap-6">
             <div className="flex flex-col gap-2">
@@ -165,10 +189,10 @@ const PhoneInput = ({ onNext, isLogin }: any) => {
                     variant="primary"
                     className="w-full"
                     size="xxl"
-                    disabled={phone.length < 10}
-                    onClick={() => onNext(phone)}
+                    disabled={phone.length < 10 || loading}
+                    onClick={handleNext}
                 >
-                    Get OTP
+                    {loading ? 'Sending...' : 'Get OTP'}
                 </LoKeyButton>
                 <p className="text-[11px] text-center text-[var(--muted-foreground)] px-6">
                     By continuing, you agree to receive a secure verification code via SMS.
@@ -180,6 +204,28 @@ const PhoneInput = ({ onNext, isLogin }: any) => {
 
 const OTPVerify = ({ phone, onNext, onResend }: any) => {
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+    const [loading, setLoading] = useState(false);
+
+    const handleVerify = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, otp: otp.join('') })
+            });
+            const data = await res.json();
+            if (data.success) {
+                onNext({ setupToken: data.setup_token, isNewUser: data.is_new_user });
+            } else {
+                alert(data.error || 'Invalid OTP');
+            }
+        } catch (e) {
+            alert('Network error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleChange = (val: string, index: number) => {
         if (val.length > 1) val = val.slice(-1);
@@ -227,10 +273,10 @@ const OTPVerify = ({ phone, onNext, onResend }: any) => {
                     variant="primary"
                     className="w-full"
                     size="xxl"
-                    disabled={otp.some(d => !d)}
-                    onClick={onNext}
+                    disabled={otp.some(d => !d) || loading}
+                    onClick={handleVerify}
                 >
-                    Verify & Continue
+                    {loading ? 'Verifying...' : 'Verify & Continue'}
                 </LoKeyButton>
             </div>
         </div>
@@ -475,16 +521,26 @@ const UnifiedSecuritySetup = ({ onComplete, isLogin }: any) => {
 
 function OnboardingContent() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const [currentStep, setCurrentStep] = useState(0);
     const [selectedLang, setSelectedLang] = useState("en");
     const [audioEnabled, setAudioEnabled] = useState(false);
     const [phone, setPhone] = useState("");
     const [isLogin, setIsLogin] = useState(false);
+    const [setupToken, setSetupToken] = useState("");
 
     useEffect(() => {
         if (searchParams.get("login") === "true") {
             setIsLogin(true);
             setCurrentStep(4);
+        }
+        if (searchParams.get("auth_completed") === "true") {
+            const isLoginQuery = searchParams.get("isLogin");
+            if (isLoginQuery !== null) {
+                setIsLogin(isLoginQuery === "true");
+            }
+            setCurrentStep(7); // Jump straight to security check post-DigiLocker
+            addAuditLog("OAuth 2.0 Success", "DigiLocker account linked securely");
         }
     }, [searchParams]);
 
@@ -602,18 +658,34 @@ function OnboardingContent() {
                 setCurrentStep(5);
                 addAuditLog("OTP Requested", `Verification code sent to +91 ${p.slice(0, 2)}...${p.slice(-2)}`);
             }} />}
-            {currentStep === 5 && <OTPVerify phone={phone} onNext={() => {
+            {currentStep === 5 && <OTPVerify phone={phone} onNext={(data: any) => {
                 addAuditLog("Mobile Verified", "Successful SMS authentication");
-                isLogin ? setCurrentStep(7) : setCurrentStep(6);
+                if (data.setupToken) {
+                    setSetupToken(data.setupToken);
+                    if (isLogin) {
+                        setCurrentStep(7);
+                    } else {
+                        // Redirect to actual backend OAuth route
+                        window.location.href = `/api/auth/digilocker/start?token=${data.setupToken}`;
+                    }
+                }
             }} onResend={() => {
                 addAuditLog("OTP Resend", "User requested new verification code", "Warning");
                 alert("OTP Resent!");
             }} />}
             {currentStep === 6 && <OAuthSimulation onComplete={() => {
-                addAuditLog("DigiLocker Linked", "Secure OAuth 2.0 handshake successful");
-                setCurrentStep(7);
+                // This is now purely visually fallback, but will be skipped normally due to redirect above
             }} />}
-            {currentStep === 7 && <UnifiedSecuritySetup isLogin={isLogin} onComplete={() => {
+            {currentStep === 7 && <UnifiedSecuritySetup isLogin={isLogin} onComplete={async () => {
+                if (isLogin && setupToken) {
+                    try {
+                        await fetch('/api/auth/complete-login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ setupToken })
+                        });
+                    } catch (e) { console.error(e) }
+                }
                 addAuditLog(isLogin ? "Auth Checked" : "Security Setup Complete", isLogin ? "Session secured with device hardware" : "Biometrics and PIN successfully registered");
                 setCurrentStep(8);
             }} />}
@@ -667,19 +739,35 @@ function OnboardingContent() {
                             </p>
                         </div>
 
+                        {!isLogin && (
+                            <div className="p-4 rounded-[var(--radius-lg)] border border-[var(--color-warning-600)]/30 bg-[var(--color-warning-600)]/5 flex items-center gap-3">
+                                <AlertCircle className="w-5 h-5 text-[var(--color-warning-600)] shrink-0" />
+                                <p className="text-[11px] text-[var(--color-warning-600)] font-700 text-left leading-tight">
+                                    Your Kavach ID will be generated after completing document verification and VKYC.
+                                </p>
+                            </div>
+                        )}
+
                         <LoKeyButton
                             variant="primary"
                             className="w-full mt-2 py-6"
                             size="xxl"
                             onClick={() => {
-                                localStorage.setItem("kavach_identity_verified", "false"); // Still need VKYC for full verify
+                                localStorage.setItem("kavach_identity_verified", "false");
                                 localStorage.setItem("kavach_user_id", "ammar@kavach");
-                                addAuditLog("Session Active", "User redirected to Dashboard");
-                                window.location.href = "/dashboard";
+                                if (isLogin) {
+                                    addAuditLog("Session Active", "User redirected to Dashboard");
+                                    window.location.href = "/dashboard";
+                                } else {
+                                    // New signup — must complete KYC before Kavach ID is issued
+                                    localStorage.setItem("kavach_kyc_complete", "false");
+                                    addAuditLog("KYC Required", "New user redirected to identity verification flow");
+                                    window.location.href = "/create-vc?from=signup";
+                                }
                             }}
                             rightIcon={<ArrowRight className="w-5 h-5" />}
                         >
-                            Go to Dashboard
+                            {isLogin ? "Go to Dashboard" : "Verify Identity →"}
                         </LoKeyButton>
                     </div>
                 </div>

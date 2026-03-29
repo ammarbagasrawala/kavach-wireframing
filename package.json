@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "better-sqlite3": "^12.8.0",
     "clsx": "^2.1.1",
+    "jose": "^6.2.2",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

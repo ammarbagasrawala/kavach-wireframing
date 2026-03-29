@@ -40,6 +40,11 @@ export default function DashboardPage() {
     const [kavachId, setKavachId] = useState<string | null>(null);
     const [mismatches, setMismatches] = useState<any[]>([]);
     const [showMismatchModal, setShowMismatchModal] = useState(false);
+    const [userProfile, setUserProfile] = useState<any>(null);
+    // KYC Gate: set to true when new signup hasn't completed create-vc + VKYC yet
+    const [kycGatePending, setKycGatePending] = useState(false);
+    const [showSchedulePicker, setShowSchedulePicker] = useState(false);
+    const [scheduledKycDate, setScheduledKycDate] = useState<string>("");
 
     useEffect(() => {
         const isPending = localStorage.getItem("kavach_pending_kyc") === "true";
@@ -54,7 +59,14 @@ export default function DashboardPage() {
         setVkycDate(date);
 
         const id = localStorage.getItem("kavach_user_id");
-        setKavachId(id || "ammar@kavach"); // Fallback for wireframe
+        setKavachId(id || "ammar@kavach");
+
+        // KYC Gate: explicitly false means signup happened but KYC not yet done
+        const kycComplete = localStorage.getItem("kavach_kyc_complete");
+        setKycGatePending(kycComplete === "false");
+
+        const scheduledDate = localStorage.getItem("kavach_kyc_scheduled_date");
+        if (scheduledDate) setScheduledKycDate(scheduledDate);
 
         const logs = localStorage.getItem("kavach_audit_logs");
         if (logs) {
@@ -88,6 +100,17 @@ export default function DashboardPage() {
             ];
             setMismatches(detected);
         }
+
+        // Fetch real user data
+        fetch('/api/user/me')
+            .then(res => res.json())
+            .then(data => {
+                if (data.authenticated) {
+                    setUserProfile(data.user);
+                    setKavachId(data.user.kavach_id);
+                }
+            })
+            .catch(err => console.error("Failed to fetch user state", err));
     }, []);
 
     const docLibrary: Record<string, any> = {
@@ -139,8 +162,92 @@ export default function DashboardPage() {
             />
 
             <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[var(--background)] pb-24 lg:pb-6">
+                {/* ── Mandatory KYC Gate Banner ── */}
+                {kycGatePending && (
+                    <div className="mb-6 rounded-[var(--radius-xl)] overflow-hidden border-2 border-[var(--primary-500)] shadow-elevation-md animate-in slide-in-from-top-4 duration-500">
+                        <div className="bg-gradient-to-r from-[var(--primary-500)] to-[var(--primary-600)] p-5 flex flex-col md:flex-row md:items-center gap-4">
+                            <div className="flex items-center gap-3 flex-1">
+                                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
+                                    <ShieldAlert className="w-6 h-6" />
+                                </div>
+                                <div className="text-white">
+                                    <h2 className="text-[16px] font-800 tracking-tight">Kavach ID Not Yet Issued</h2>
+                                    <p className="text-[12px] text-white/80 leading-snug">
+                                        Complete document verification &amp; VKYC to generate your permanent Kavach Identity.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                                <LoKeyButton
+                                    variant="primary"
+                                    size="l"
+                                    className="bg-white !text-[var(--primary-500)] hover:bg-white/90 border-none font-800 shadow-lg"
+                                    rightIcon={<ArrowRight className="w-4 h-4" />}
+                                    onClick={() => window.location.href = "/create-vc?from=signup"}
+                                >
+                                    Complete Now
+                                </LoKeyButton>
+                                <LoKeyButton
+                                    variant="tertiary"
+                                    size="l"
+                                    className="!text-white border-white/30 hover:bg-white/10"
+                                    leftIcon={<Calendar className="w-4 h-4" />}
+                                    onClick={() => setShowSchedulePicker(!showSchedulePicker)}
+                                >
+                                    Schedule Later
+                                </LoKeyButton>
+                            </div>
+                        </div>
+
+                        {showSchedulePicker && (
+                            <div className="bg-[var(--card)] border-t border-[var(--border)] p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 animate-in slide-in-from-top-2 duration-200">
+                                <div className="flex flex-col gap-1 flex-1">
+                                    <label className="text-[11px] font-800 uppercase text-[var(--muted-foreground)] tracking-wider">Pick a date to complete KYC</label>
+                                    <input
+                                        type="date"
+                                        min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                                        value={scheduledKycDate}
+                                        onChange={e => setScheduledKycDate(e.target.value)}
+                                        className="border border-[var(--border)] rounded-[var(--radius-md)] px-3 py-2 text-[14px] font-600 bg-[var(--background)] focus:outline-none focus:border-[var(--primary-500)]"
+                                    />
+                                </div>
+                                <LoKeyButton
+                                    variant="primary"
+                                    size="l"
+                                    disabled={!scheduledKycDate}
+                                    onClick={() => {
+                                        localStorage.setItem("kavach_kyc_scheduled_date", scheduledKycDate);
+                                        addAuditLog("KYC Scheduled", `User scheduled KYC for ${scheduledKycDate}`);
+                                        setShowSchedulePicker(false);
+                                        setKycGatePending(false); // Soft-dismiss gate
+                                        localStorage.setItem("kavach_kyc_complete", "scheduled");
+                                    }}
+                                >
+                                    Confirm Schedule
+                                </LoKeyButton>
+                                <button onClick={() => setShowSchedulePicker(false)} className="text-[12px] text-[var(--muted-foreground)] hover:text-black font-600 self-center">
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Scheduled KYC reminder (soft banner) */}
+                {scheduledKycDate && localStorage.getItem("kavach_kyc_complete") === "scheduled" && (
+                    <div className="mb-6 p-4 rounded-[var(--radius-xl)] bg-[var(--color-warning-600)]/10 border border-[var(--color-warning-600)]/40 flex items-center gap-3 animate-in fade-in duration-300">
+                        <Calendar className="w-5 h-5 text-[var(--color-warning-600)] shrink-0" />
+                        <p className="text-[13px] font-600 flex-1">
+                            <span className="font-800">KYC Scheduled for {scheduledKycDate}.</span> Your Kavach ID will be issued once verification is complete.
+                        </p>
+                        <LoKeyButton variant="tertiary" size="xs" onClick={() => window.location.href = "/create-vc?from=signup"}>
+                            Do it now
+                        </LoKeyButton>
+                    </div>
+                )}
+
                 {/* Profile Incomplete Banner */}
-                {!pendingKyc && !verified && (
+                {!pendingKyc && !verified && !kycGatePending && (
                     <div className="mb-6 p-4 md:p-6 rounded-[var(--radius-xl)] bg-[color-mix(in_srgb,var(--primary-500)_8%,transparent)] border border-[var(--primary-500)] flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-6">
                         <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[var(--primary-500)] flex items-center justify-center text-white shrink-0 shadow-lg shadow-[var(--primary-500)]/20">
                             <ShieldAlert className="w-6 h-6 md:w-8 md:h-8" />

@@ -77,117 +77,139 @@ const UnifiedConsent = ({ onNext }: any) => {
     );
 };
 
-// --- OTP Verification Steps (CKYCR + DigiLocker) ---
-const OTPVerification = ({ onNext, selectedDocs = ["aadhaar", "pan", "ckycr"] }: any) => {
-    // Sequence order
-    const priority = ["aadhaar", "pan", "passport", "voter", "ckycr"];
-    const docsToVerify = priority.filter(p => selectedDocs.includes(p));
+// --- CKYCR Verification (replaces old multi-doc OTP flow) ---
+// Aadhaar & PAN are fetched via DigiLocker — only CKYCR needs mock-lookup here.
+const CKYCRVerification = ({ onNext, selectedDocs = ["aadhaar", "pan", "ckycr"] }: any) => {
+    const [phase, setPhase] = useState<"idle" | "searching" | "found" | "done">("idle");
+    const [ckycData, setCkycData] = useState<any>(null);
 
-    const [docPageIndex, setDocPageIndex] = useState(0); // Index in docsToVerify
-    const [isSearching, setIsSearching] = useState(true);
-    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-
-    const currentDocId = docsToVerify[docPageIndex];
-    const docMeta: any = {
-        aadhaar: { title: "Aadhaar", icon: FileText, registry: "DigiLocker" },
-        pan: { title: "PAN Card", icon: Hash, registry: "DigiLocker" },
-        passport: { title: "Passport", icon: Globe, registry: "DigiLocker" },
-        voter: { title: "Voter ID", icon: UserRoundCheck, registry: "DigiLocker" },
-        ckycr: { title: "CKYCR Record", icon: ShieldCheck, registry: "Central Registry" }
-    }[currentDocId];
-
-    const handleOtpChange = (index: number, value: string) => {
-        if (value.length > 1) value = value[0];
-        const newOtp = [...otp];
-        newOtp[index] = value;
-        setOtp(newOtp);
-        if (value && index < 5) document.getElementById(`otp-${index + 1}`)?.focus();
-    };
-
+    // If CKYCR not selected, auto-skip
     useEffect(() => {
-        // Start searching state when document changes
-        setIsSearching(true);
-        const timer = setTimeout(() => {
-            setIsSearching(false);
-        }, 2000);
-        return () => clearTimeout(timer);
-    }, [docPageIndex]);
-
-    const handleVerify = () => {
-        setOtp(["", "", "", "", "", ""]);
-        if (docPageIndex < docsToVerify.length - 1) {
-            addAuditLog("Registry Auth Success", `Successfully authorized ${docMeta.title} fetch`);
-            setDocPageIndex(docPageIndex + 1);
-        } else {
-            addAuditLog("Identity Data Fetched", `All ${docsToVerify.length} requested documents retrieved and verified`);
+        if (!selectedDocs.includes("ckycr")) {
+            addAuditLog("CKYCR", "CKYCR not selected — skipping verification step");
             onNext();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const runCkycSearch = async () => {
+        setPhase("searching");
+
+        const adharRaw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("kavach_idfy_adhar_data") : null;
+        const adharData = adharRaw ? JSON.parse(adharRaw) : null;
+        const panRaw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("kavach_idfy_pan_data") : null;
+        const panData = panRaw ? JSON.parse(panRaw) : null;
+        const panNo = panData?.parsed_details?.pan_no || "ABCPA1234F"; // seeded demo PAN
+
+        try {
+            const res = await fetch("http://localhost:8001/api/demo/verify-search", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ fi_code: "IN0106", id_type: "C", id_no: panNo })
+            });
+            const data = await res.json();
+
+            const extract = (xml: string, tag: string) => {
+                const m = xml.match(new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, "i"));
+                return m ? m[1].trim() : null;
+            };
+
+            const pid = data.decrypted_pid_xml || "";
+            const record = {
+                name: extract(pid, "name") || adharData?.parsed_details?.name || "—",
+                pan: panNo,
+                dob: extract(pid, "dob") || adharData?.parsed_details?.dob || "—",
+                ckyc_no: extract(pid, "ckyc_no") || `CKYC${Date.now().toString().slice(-8)}`,
+                kyc_date: extract(pid, "kyc_date") || new Date().toISOString().split("T")[0],
+                request_id: data.request_id_used,
+                note: data.http_status !== 200 ? `Demo record (CKYCR returned ${data.http_status})` : null
+            };
+            setCkycData(record);
+            sessionStorage.setItem("kavach_ckycr_data", JSON.stringify(record));
+            addAuditLog("CKYCR Verified", `Record found for PAN ${panNo} — CKYC# ${record.ckyc_no}`);
+        } catch {
+            // CKYCR mock server offline — use demo data so flow is never blocked
+            const fallback = {
+                name: adharData?.parsed_details?.name || "—",
+                pan: panNo,
+                dob: adharData?.parsed_details?.dob || "—",
+                ckyc_no: `CKYC${Date.now().toString().slice(-8)}`,
+                kyc_date: new Date().toISOString().split("T")[0],
+                note: "Demo record (CKYCR server offline — start on port 8001)"
+            };
+            setCkycData(fallback);
+            sessionStorage.setItem("kavach_ckycr_data", JSON.stringify(fallback));
+            addAuditLog("CKYCR Demo", "CKYCR mock offline — using demo record to continue");
+        }
+
+        setPhase("found");
     };
 
     return (
-        <div className="flex flex-col h-full gap-6">
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col h-full">
-                <div className="flex flex-col gap-2 mb-6">
-                    <div className="flex items-center gap-2 text-[var(--primary-500)] font-800 text-[12px] uppercase tracking-wider">
-                        <docMeta.icon className="w-4 h-4" />
-                        {docMeta.title} ({docMeta.registry})
-                    </div>
-                    <h2 className="text-[18px] md:text-[20px] font-800 tracking-tight">
-                        {isSearching ? (currentDocId === 'ckycr' ? 'Querying Registry...' : 'Querying DigiLocker...') : "Verify & Fetch"}
-                    </h2>
-                    <p className="text-[13px] md:text-[14px] text-[var(--muted-foreground)] leading-tight">
-                        {isSearching
-                            ? (currentDocId === 'ckycr' ? `Searching Central Registry for your records...` : `Fetching ${docMeta.title} record from DigiLocker...`)
-                            : `A 6-digit code has been sent to your mobile to authorize ${docMeta.title} fetch.`}
-                    </p>
+        <div className="flex flex-col h-full gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-[var(--primary-500)] font-800 text-[12px] uppercase tracking-wider">
+                    <ShieldCheck className="w-4 h-4" />
+                    CKYCR Record (Central Registry)
                 </div>
-
-                {isSearching ? (
-                    <div className="flex-1 flex flex-col items-center justify-center gap-4 py-12">
-                        <div className="w-16 h-16 rounded-full border-4 border-[var(--primary-500)]/20 border-t-[var(--primary-500)] animate-spin"></div>
-                        <p className="text-[12px] font-700 text-[var(--primary-500)] animate-pulse uppercase tracking-widest">Active Search...</p>
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-6">
-                        <div className="bg-[var(--primary-500)]/5 border border-[var(--primary-500)]/10 p-4 rounded-[var(--radius-lg)] flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[var(--primary-500)] shadow-sm">
-                                <Search className="w-5 h-5" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-[13px] font-800">Record Located</span>
-                                <span className="text-[11px] text-[var(--muted-foreground)]">Auth needed to fetch signed data</span>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-4">
-                            <div className="grid grid-cols-6 gap-1.5 md:gap-2">
-                                {otp.map((digit, i) => (
-                                    <input
-                                        key={i} id={`otp-${i}`} type="text" inputMode="numeric" maxLength={1} value={digit}
-                                        onChange={e => handleOtpChange(i, e.target.value.replace(/\D/g, ''))}
-                                        className="w-full aspect-square text-center text-[18px] md:text-[20px] font-800 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] focus:border-[var(--primary-500)] outline-none"
-                                        autoFocus={i === 0}
-                                    />
-                                ))}
-                            </div>
-                            <button className="text-[12px] font-700 text-[var(--primary-500)] self-start">Resend OTP</button>
-                        </div>
-                    </div>
-                )}
-
-                <LoKeyButton
-                    variant="primary"
-                    size="xl"
-                    className="w-full mt-auto"
-                    disabled={isSearching || otp.some(d => !d)}
-                    onClick={handleVerify}
-                >
-                    {docPageIndex === docsToVerify.length - 1 ? "Complete Verification" : "Next Document"}
-                </LoKeyButton>
+                <h2 className="text-[20px] font-800 tracking-tight">
+                    {phase === "searching" ? "Querying Central Registry..." : phase === "found" ? "Record Found" : "Central KYC Lookup"}
+                </h2>
+                <p className="text-[13px] text-[var(--muted-foreground)] leading-snug">
+                    {phase === "idle" && "Kavach will query CKYCR to retrieve your existing KYC record linked to your PAN."}
+                    {phase === "searching" && "Searching Central KYC Registry for your PAN-linked record..."}
+                    {phase === "found" && "Your CKYCR record has been securely retrieved and verified."}
+                </p>
             </div>
+
+            {phase === "idle" && (
+                <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
+                    <div className="w-20 h-20 rounded-full bg-[var(--primary-500)]/10 flex items-center justify-center text-[var(--primary-500)]">
+                        <ShieldCheck className="w-10 h-10" />
+                    </div>
+                    <div className="text-center flex flex-col gap-1">
+                        <p className="text-[14px] font-700">PAN-linked CKYCR Search</p>
+                        <p className="text-[12px] text-[var(--muted-foreground)]">Securely queries RBI's Central KYC Registry using your PAN number.</p>
+                    </div>
+                    <LoKeyButton variant="primary" size="xl" className="w-full" onClick={runCkycSearch} rightIcon={<ArrowRight className="w-4 h-4" />}>
+                        Query CKYCR Now
+                    </LoKeyButton>
+                </div>
+            )}
+
+            {phase === "searching" && (
+                <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                    <div className="w-16 h-16 rounded-full border-4 border-[var(--primary-500)]/20 border-t-[var(--primary-500)] animate-spin" />
+                    <p className="text-[12px] font-700 text-[var(--primary-500)] animate-pulse uppercase tracking-widest">Active Search...</p>
+                </div>
+            )}
+
+            {phase === "found" && ckycData && (
+                <div className="flex flex-col gap-4 flex-1">
+                    <div className="bg-green-50 border border-green-200 p-4 rounded-[var(--radius-lg)] flex flex-col gap-3">
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                            <span className="text-[13px] font-800 text-green-800">CKYCR Record Verified ✓</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[12px]">
+                            {ckycData.name && <div><span className="text-gray-500">Name: </span><span className="font-700">{ckycData.name}</span></div>}
+                            {ckycData.pan && <div><span className="text-gray-500">PAN: </span><span className="font-700">{ckycData.pan}</span></div>}
+                            {ckycData.dob && <div><span className="text-gray-500">DOB: </span><span className="font-700">{ckycData.dob}</span></div>}
+                            {ckycData.ckyc_no && <div><span className="text-gray-500">CKYC#: </span><span className="font-700">{ckycData.ckyc_no}</span></div>}
+                            {ckycData.kyc_date && <div><span className="text-gray-500">KYC Date: </span><span className="font-700">{ckycData.kyc_date}</span></div>}
+                            {ckycData.note && <div className="col-span-2 mt-1"><span className="text-orange-600 text-[11px]">{ckycData.note}</span></div>}
+                        </div>
+                    </div>
+                    <LoKeyButton variant="primary" size="xl" className="w-full mt-auto" onClick={() => { setPhase("done"); onNext(); }} rightIcon={<ArrowRight className="w-4 h-4" />}>
+                        Confirm & Continue
+                    </LoKeyButton>
+                </div>
+            )}
         </div>
     );
 };
+
+
 
 const FaceCapture = ({ onNext }: any) => {
     const [status, setStatus] = useState("idle"); // idle, scanning, success
@@ -283,10 +305,15 @@ const FaceCapture = ({ onNext }: any) => {
     );
 };
 
-const FieldSelection = ({ onComplete }: any) => {
+const FieldSelection = ({ onComplete, backendAlive }: any) => {
     const [expanded, setExpanded] = useState<string | null>("aadhaar");
     const [selectedDocs, setSelectedDocs] = useState<string[]>(["aadhaar", "pan", "ckycr"]);
+    const [refreshTick, setRefreshTick] = useState(0); // bump to re-read sessionStorage
     const [showOptionalPicker, setShowOptionalPicker] = useState(false);
+
+    // Pan Prompt State
+    const [showPanPrompt, setShowPanPrompt] = useState(false);
+    const [panDetails, setPanDetails] = useState({ panno: "", fullName: "" });
 
     const allDocs = [
         {
@@ -380,6 +407,26 @@ const FieldSelection = ({ onComplete }: any) => {
         }
     };
 
+    // Track IDfy fetch status from sessionStorage (refreshTick forces re-read)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const adharFetched = typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem("kavach_idfy_adhar_data");
+    const panFetched = typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem("kavach_idfy_pan_data");
+    void refreshTick; // consumed to trigger re-render
+
+    const handleAgreeAndFetch = () => {
+        // If PAN needs details and they are missing, prompt first
+        if (selectedDocs.includes("pan") && !panFetched && (!panDetails.panno || !panDetails.fullName)) {
+            setShowPanPrompt(true);
+        } else {
+            onComplete(selectedDocs, panDetails);
+        }
+    };
+
+    // Determine what the next IDfy action is
+    const needsAadhaarFetch = selectedDocs.includes("aadhaar") && !adharFetched;
+    const needsPanFetch = selectedDocs.includes("pan") && !panFetched;
+    const allIdfyDone = !needsAadhaarFetch && !needsPanFetch;
+
     return (
         <div className="flex flex-col h-full gap-6">
             <div className="flex flex-col gap-2">
@@ -388,6 +435,16 @@ const FieldSelection = ({ onComplete }: any) => {
                     Review and authorize the specific data points to be fetched into your VC.
                 </p>
             </div>
+
+            {/* Backend Offline Warning */}
+            {backendAlive === false && (
+                <div className="p-3 rounded-[var(--radius-lg)] bg-orange-50 border border-orange-200 flex items-center gap-3 animate-in fade-in">
+                    <span className="text-orange-600 text-[16px]">⚠</span>
+                    <p className="text-[12px] text-orange-800 font-600 leading-snug">
+                        <strong>Python API Offline.</strong> DigiLocker fetch via IDfy will be skipped. Start with: <code>uvicorn main:app --reload</code>
+                    </p>
+                </div>
+            )}
 
             {/* DigiLocker Awareness Banner */}
             <div className="p-4 rounded-[var(--radius-xl)] bg-[var(--primary-500)]/10 border border-[var(--primary-500)]/20 flex gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm">
@@ -482,20 +539,158 @@ const FieldSelection = ({ onComplete }: any) => {
                 </div>
             </div>
 
-            <div className="pt-4 border-t border-[var(--border)]">
-                <LoKeyButton
-                    variant="primary"
-                    className="w-full shadow-elevation-md"
-                    size="xxl"
-                    onClick={() => onComplete(selectedDocs)}
-                    rightIcon={<ArrowRight className="w-5 h-5" />}
-                >
-                    Agree & Fetch Identity
-                </LoKeyButton>
-                <p className="text-[12px] text-center text-[var(--muted-foreground)] mt-3 px-4 leading-snug">
+            <div className="pt-4 border-t border-[var(--border)] flex flex-col gap-3">
+
+                {/* Sequential DigiLocker fetch status + buttons */}
+                {(selectedDocs.includes("aadhaar") || selectedDocs.includes("pan")) && (
+                    <div className="flex flex-col gap-2">
+                        <p className="text-[11px] font-800 uppercase tracking-widest text-[var(--muted-foreground)]">DigiLocker Fetch Progress</p>
+                        <div className="flex flex-col gap-2">
+                            {selectedDocs.includes("aadhaar") && (
+                                <div className={`flex items-center gap-3 p-3 rounded-[var(--radius-lg)] border ${adharFetched ? "bg-green-50 border-green-200" : "bg-[var(--muted)]/40 border-[var(--border)]"
+                                    }`}>
+                                    {adharFetched
+                                        ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                                        : <div className="w-4 h-4 rounded-full border-2 border-[var(--border)] shrink-0" />}
+                                    <span className={`text-[13px] font-700 flex-1 ${adharFetched ? "text-green-800" : "text-[var(--muted-foreground)]"
+                                        }`}>
+                                        {adharFetched ? "Aadhaar — Fetched from DigiLocker ✓" : "Aadhaar — Pending fetch"}
+                                    </span>
+                                    {adharFetched && (
+                                        <button
+                                            onClick={() => { sessionStorage.removeItem("kavach_idfy_adhar_data"); setRefreshTick(t => t + 1); }}
+                                            className="text-[11px] text-green-700 underline underline-offset-2 hover:text-red-600 transition-colors shrink-0"
+                                            title="Clear and re-fetch Aadhaar"
+                                        >Re-fetch</button>
+                                    )}
+                                </div>
+                            )}
+                            {selectedDocs.includes("pan") && (
+                                <div className={`flex items-center gap-3 p-3 rounded-[var(--radius-lg)] border ${panFetched ? "bg-green-50 border-green-200" : "bg-[var(--muted)]/40 border-[var(--border)]"
+                                    }`}>
+                                    {panFetched
+                                        ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                                        : <div className="w-4 h-4 rounded-full border-2 border-[var(--border)] shrink-0" />}
+                                    <span className={`text-[13px] font-700 flex-1 ${panFetched ? "text-green-800" : "text-[var(--muted-foreground)]"
+                                        }`}>
+                                        {panFetched ? "PAN — Fetched from DigiLocker ✓" : adharFetched ? "PAN — Ready to fetch" : "PAN — Fetch after Aadhaar"}
+                                    </span>
+                                    {panFetched && (
+                                        <button
+                                            onClick={() => { sessionStorage.removeItem("kavach_idfy_pan_data"); setRefreshTick(t => t + 1); }}
+                                            className="text-[11px] text-green-700 underline underline-offset-2 hover:text-red-600 transition-colors shrink-0"
+                                            title="Clear and re-fetch PAN"
+                                        >Re-fetch</button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Action button — changes based on what's needed next */}
+                {needsAadhaarFetch ? (
+                    <LoKeyButton
+                        id="agree-fetch-btn"
+                        variant="primary"
+                        className="w-full shadow-elevation-md"
+                        size="xxl"
+                        onClick={() => onComplete(selectedDocs, panDetails)}
+                        rightIcon={<ArrowRight className="w-5 h-5" />}
+                    >
+                        Fetch Aadhaar from DigiLocker
+                    </LoKeyButton>
+                ) : needsPanFetch ? (
+                    <LoKeyButton
+                        id="agree-fetch-btn"
+                        variant="primary"
+                        className="w-full shadow-elevation-md"
+                        size="xxl"
+                        onClick={() => {
+                            if (!panDetails.panno || !panDetails.fullName) {
+                                setShowPanPrompt(true);
+                            } else {
+                                onComplete(selectedDocs, panDetails);
+                            }
+                        }}
+                        rightIcon={<ArrowRight className="w-5 h-5" />}
+                    >
+                        Fetch PAN from DigiLocker
+                    </LoKeyButton>
+                ) : (
+                    <LoKeyButton
+                        id="agree-fetch-btn"
+                        variant="primary"
+                        className="w-full shadow-elevation-md"
+                        size="xxl"
+                        onClick={handleAgreeAndFetch}
+                        rightIcon={<ArrowRight className="w-5 h-5" />}
+                    >
+                        {(selectedDocs.includes("aadhaar") || selectedDocs.includes("pan")) ? "Continue to Verification" : "Agree & Fetch Identity"}
+                    </LoKeyButton>
+                )}
+
+                <p className="text-[12px] text-center text-[var(--muted-foreground)] px-4 leading-snug">
                     By continuing, you authorize fetching of cryptographically signed records from the respective registries.
                 </p>
             </div>
+
+            {showPanPrompt && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                    <div className="bg-[var(--card)] w-full max-w-md rounded-[var(--radius-xl)] shadow-2xl p-6 flex flex-col gap-5 animate-in slide-in-from-bottom-4">
+                        <div className="flex flex-col gap-2">
+                            <div className="w-12 h-12 rounded-full bg-[var(--primary-500)]/10 flex items-center justify-center text-[var(--primary-500)] mb-2">
+                                <Hash className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-[20px] font-800 tracking-tight">Enter PAN Details</h3>
+                            <p className="text-[13px] text-[var(--muted-foreground)] leading-relaxed">
+                                DigiLocker requires your exact PAN Number and Name to securely fetch the signed tax record.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[12px] font-700 text-[var(--neutral-900)]">PAN Number</label>
+                                <input
+                                    type="text"
+                                    value={panDetails.panno}
+                                    onChange={e => setPanDetails({ ...panDetails, panno: e.target.value.toUpperCase() })}
+                                    className="w-full px-4 py-3 rounded-[var(--radius-md)] border border-[var(--border)] focus:border-[var(--primary-500)] outline-none uppercase font-mono text-[14px] bg-[var(--background)]"
+                                    placeholder="ABCDE1234F"
+                                    maxLength={10}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[12px] font-700 text-[var(--neutral-900)]">Name (as per PAN)</label>
+                                <input
+                                    type="text"
+                                    value={panDetails.fullName}
+                                    onChange={e => setPanDetails({ ...panDetails, fullName: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-[var(--radius-md)] border border-[var(--border)] focus:border-[var(--primary-500)] outline-none text-[14px] bg-[var(--background)]"
+                                    placeholder="JOHN DOE"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-2">
+                            <LoKeyButton variant="secondary" className="flex-1" onClick={() => setShowPanPrompt(false)}>
+                                Back
+                            </LoKeyButton>
+                            <LoKeyButton
+                                variant="primary"
+                                className="flex-1"
+                                disabled={!panDetails.panno || !panDetails.fullName}
+                                onClick={() => {
+                                    setShowPanPrompt(false);
+                                    onComplete(selectedDocs, panDetails);
+                                }}
+                            >
+                                Continue to DigiLocker
+                            </LoKeyButton>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar {
@@ -938,6 +1133,7 @@ const SuccessLocked = ({ issuedDocs }: { issuedDocs: string[] }) => {
     useEffect(() => {
         localStorage.setItem("kavach_pending_kyc", "false");
         localStorage.setItem("kavach_identity_verified", "true");
+        localStorage.setItem("kavach_kyc_complete", "true"); // Clears the dashboard KYC gate
         localStorage.setItem("kavach_issued_docs", JSON.stringify(issuedDocs));
         // Clear pending logs
         const logs = localStorage.getItem("kavach_audit_logs");
@@ -996,14 +1192,93 @@ const SuccessLocked = ({ issuedDocs }: { issuedDocs: string[] }) => {
 // --- Main Page Component ---
 
 export default function CreateVCPage() {
-    const [currentStep, setCurrentStep] = useState(1); // 1: Consent, 2: Selection, 3: Face, 4: OTP, 5: Enrichment, 6: VKYC Prompt, 7: Simulation, 8: Blockchain, 9: Success
+    const [currentStep, setCurrentStep] = useState(1);
     const [selectedDocs, setSelectedDocs] = useState<string[]>(["aadhaar", "pan", "ckycr"]);
+    const [idfyFetching, setIdfyFetching] = useState(false);
+    const [backendAlive, setBackendAlive] = useState<boolean | null>(null); // null = checking
+
+    // Ping the backend on mount to check if it's alive
+    useEffect(() => {
+        fetch("http://localhost:8000/status", { cache: "no-store" })
+            .then(r => r.ok ? setBackendAlive(true) : setBackendAlive(false))
+            .catch(() => setBackendAlive(false));
+    }, []);
 
     useEffect(() => {
-        // Handle resume state
-        const isPending = localStorage.getItem("kavach_pending_kyc") === "true";
-        if (isPending) {
-            setCurrentStep(7); // Resume simulation (VKYC) directly for demo
+        const params = new URLSearchParams(window.location.search);
+        const taskId = params.get("idfy_task_id");
+        const docType = params.get("idfy_doc") || "ADHAR";
+
+        if (taskId) {
+            // Clean the URL immediately to prevent re-triggering on refresh
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete("idfy_task_id");
+            cleanUrl.searchParams.delete("idfy_doc");
+            window.history.replaceState({}, document.title, cleanUrl.toString());
+
+            setCurrentStep(2);
+            setIdfyFetching(true);
+
+            let pollCount = 0;
+            const fetchIdfyResult = async () => {
+                if (pollCount > 5) { // Timeout after 10 seconds — non-blocking, continue with whatever succeeded
+                    console.warn("IDfy webhook polling timed out — continuing with existing data.");
+                    setIdfyFetching(false);
+                    return;
+                }
+                pollCount++;
+
+                try {
+                    // Append timestamp to bust aggressive browser cache of the 'pending' JSON
+                    const res = await fetch(`http://localhost:8000/result/${taskId}?t=${Date.now()}`);
+                    if (!res.ok) throw new Error("Backend not responding");
+                    const data = await res.json();
+
+                    if (data.status === 'completed') {
+                        let isSuccess = false;
+                        // Known IDfy error statuses (non-success terminal states)
+                        const IDFY_ERROR_STATUSES = ["INSUFFICIENT_SCOPE", "FAILED", "ERROR", "REJECTED"];
+                        const idfyStatus = data.data?.status;
+                        if (idfyStatus && IDFY_ERROR_STATUSES.includes(idfyStatus)) {
+                            console.error("IDfy API failed:", data.data);
+                            alert(`IDfy DigiLocker Fetch Failed for ${docType}.\nReason: ${idfyStatus}\n\nYou can uncheck it or try again.`);
+                        } else {
+                            // Either status is SUCCESS or status is absent (treat as success)
+                            if (docType === "PANCR") {
+                                sessionStorage.setItem("kavach_idfy_pan_data", JSON.stringify(data.data));
+                            } else {
+                                sessionStorage.setItem("kavach_idfy_adhar_data", JSON.stringify(data.data));
+                            }
+                            addAuditLog("DigiLocker Sync", `${docType} fetched successfully via IDfy.`);
+                            isSuccess = true;
+                        }
+
+                        setIdfyFetching(false);
+
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("idfy_task_id");
+                        url.searchParams.delete("idfy_doc");
+                        window.history.replaceState({}, document.title, url.toString());
+
+                        // Automatically trigger the next evaluation only if this one succeeded
+                        if (isSuccess) {
+                            sessionStorage.setItem("kavach_auto_continue", "true");
+                        }
+                    } else {
+                        setTimeout(fetchIdfyResult, 2000); // Poll again
+                    }
+                } catch (e) {
+                    console.error("IDfy fetch polling failed", e);
+                    setTimeout(fetchIdfyResult, 3000);
+                }
+            };
+            fetchIdfyResult();
+        } else {
+            // Handle resume state
+            const isPending = localStorage.getItem("kavach_pending_kyc") === "true";
+            if (isPending) {
+                setCurrentStep(7); // Resume simulation (VKYC) directly for demo
+            }
         }
     }, []);
 
@@ -1022,6 +1297,27 @@ export default function CreateVCPage() {
         window.location.href = "/dashboard";
     };
 
+    // No longer auto-clicking the button — the user now manually presses the sequential fetch buttons
+
+    if (idfyFetching) {
+        return (
+            <OnboardingLayout step={2} totalSteps={9}>
+                <div className="flex flex-col items-center justify-center h-full animate-in zoom-in duration-500">
+                    <div className="relative">
+                        <div className="w-24 h-24 rounded-full bg-[var(--primary-500)]/10 flex items-center justify-center text-[var(--primary-500)]">
+                            <ShieldCheck className="w-12 h-12 animate-pulse" />
+                        </div>
+                        <div className="absolute inset-0 border-4 border-dashed border-[var(--primary-500)]/30 rounded-full animate-[spin_4s_linear_infinite]"></div>
+                    </div>
+                    <h2 className="mt-8 text-[22px] font-800 tracking-tight text-center">Securing Identity Payload</h2>
+                    <p className="text-[14px] text-[var(--muted-foreground)] mt-2 text-center max-w-[280px] leading-relaxed">
+                        Retrieving cryptographically signed XML from DigiLocker via IDfy...
+                    </p>
+                </div>
+            </OnboardingLayout>
+        );
+    }
+
     return (
         <OnboardingLayout
             step={currentStep}
@@ -1029,9 +1325,81 @@ export default function CreateVCPage() {
             showAudioToggle={true}
         >
             {currentStep === 1 && <UnifiedConsent onNext={() => setCurrentStep(2)} />}
-            {currentStep === 2 && <FieldSelection onComplete={(docs: string[]) => { setSelectedDocs(docs); setCurrentStep(3); }} />}
+            {currentStep === 2 && <FieldSelection backendAlive={backendAlive} onComplete={async (docs: string[], panDetails?: any) => {
+                setSelectedDocs(docs);
+
+                const adharFetched = typeof sessionStorage !== 'undefined' && sessionStorage.getItem("kavach_idfy_adhar_data");
+                const panFetched = typeof sessionStorage !== 'undefined' && sessionStorage.getItem("kavach_idfy_pan_data");
+
+                // Check backend is alive before attempting any IDfy redirect
+                if (!backendAlive && (docs.includes("aadhaar") || docs.includes("pan"))) {
+                    alert("Python API server (localhost:8000) is not running. Start it with: uvicorn main:app --reload");
+                    return;
+                }
+
+                // Step 1: Fetch Aadhaar via IDfy redirect
+                if (docs.includes("aadhaar") && !adharFetched) {
+                    setIdfyFetching(true);
+                    addAuditLog("IDfy Integration", "Redirecting to IDfy/DigiLocker for Aadhaar fetch");
+                    try {
+                        const redirectUrl = new URL(window.location.href);
+                        redirectUrl.searchParams.set("idfy_doc", "ADHAR");
+
+                        const res = await fetch("http://localhost:8000/start-digilocker", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ doc_type: "ADHAR", redirect_url: redirectUrl.toString() })
+                        });
+                        const data = await res.json();
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                            return; // Wait for redirect callback
+                        } else {
+                            throw new Error("No redirect URL returned from backend");
+                        }
+                    } catch (e: any) {
+                        setIdfyFetching(false);
+                        alert("Could not reach Python API backend for Aadhaar.\nError: " + e.message);
+                        return;
+                    }
+                }
+
+                // Step 2: Fetch PAN via IDfy redirect (only after Aadhaar is done)
+                if (docs.includes("pan") && !panFetched) {
+                    setIdfyFetching(true);
+                    addAuditLog("IDfy Integration", "Redirecting to IDfy/DigiLocker for PAN fetch");
+                    try {
+                        const redirectUrl = new URL(window.location.href);
+                        redirectUrl.searchParams.set("idfy_doc", "PANCR");
+
+                        const res = await fetch("http://localhost:8000/start-digilocker", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                doc_type: "PANCR",
+                                extra_fields: { panno: panDetails?.panno || "", PANFullName: panDetails?.fullName || "" },
+                                redirect_url: redirectUrl.toString()
+                            })
+                        });
+                        const data = await res.json();
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                            return; // Wait for redirect callback
+                        } else {
+                            throw new Error("No redirect URL returned from backend");
+                        }
+                    } catch (e: any) {
+                        setIdfyFetching(false);
+                        alert("Could not reach Python API backend for PAN.\nError: " + e.message);
+                        return;
+                    }
+                }
+
+                // Step 3: Both done — proceed to Face Capture
+                setCurrentStep(3);
+            }} />}
             {currentStep === 3 && <FaceCapture onNext={() => setCurrentStep(4)} />}
-            {currentStep === 4 && <OTPVerification selectedDocs={selectedDocs} onNext={() => setCurrentStep(5)} />}
+            {currentStep === 4 && <CKYCRVerification selectedDocs={selectedDocs} onNext={() => setCurrentStep(5)} />}
             {currentStep === 5 && <EnrichmentHub onNext={() => setCurrentStep(6)} />}
             {currentStep === 6 && (
                 <VKYCPrompt

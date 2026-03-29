@@ -69,6 +69,31 @@ export default function Layout({ children, currentPage = "Dashboard", productNam
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const [requestCount, setRequestCount] = useState(0);
+    const [user, setUser] = useState<any>(null);
+    const [authLoading, setAuthLoading] = useState(true);
+
+    React.useEffect(() => {
+        const verifySession = async () => {
+            try {
+                const res = await fetch('/api/user/me');
+                if (res.status === 401) {
+                    window.location.href = '/onboarding';
+                    return;
+                }
+                const data = await res.json();
+                if (data.authenticated) {
+                    setUser(data.user);
+                } else {
+                    window.location.href = '/onboarding';
+                }
+            } catch (e) {
+                window.location.href = '/onboarding';
+            } finally {
+                setAuthLoading(false);
+            }
+        };
+        verifySession();
+    }, []);
 
     React.useEffect(() => {
         const checkRequests = () => {
@@ -94,12 +119,27 @@ export default function Layout({ children, currentPage = "Dashboard", productNam
         { label: "Navigator", icon: Layers, href: "/" },
     ];
 
-    const handleLogout = () => {
-        if (confirm("Are you sure you want to log out? This will clear your current session data.")) {
+    const handleLogout = async () => {
+        try {
             localStorage.clear();
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (e) {
+            console.error("Logout API failed", e);
+        } finally {
             window.location.href = "/onboarding";
         }
     };
+
+    if (authLoading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-[var(--background)]">
+                <div className="flex flex-col items-center gap-4 animate-pulse">
+                    <img src="/logo.png" className="w-16 h-16 opacity-50" alt="Loading..." />
+                    <span className="text-[12px] font-600 text-[var(--muted-foreground)] tracking-widest uppercase">Securing Session...</span>
+                </div>
+            </div>
+        );
+    }
 
     const bottomNavItems = [
         { label: "Settings", icon: Settings, href: "/settings" },
@@ -117,8 +157,8 @@ export default function Layout({ children, currentPage = "Dashboard", productNam
                     <button className="text-[rgba(255,255,255,0.6)] p-2">
                         <Bell className="w-5 h-5" />
                     </button>
-                    <div className="w-8 h-8 rounded-full bg-[var(--primary-500)] flex items-center justify-center text-white text-[12px] font-700">
-                        JD
+                    <div className="w-8 h-8 rounded-full bg-[var(--primary-500)] flex items-center justify-center text-white text-[12px] font-700 uppercase">
+                        {user?.name ? user.name.substring(0, 2) : 'KV'}
                     </div>
                 </div>
             </header>
@@ -231,10 +271,7 @@ export default function Layout({ children, currentPage = "Dashboard", productNam
                                     Privacy Settings
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        localStorage.clear();
-                                        window.location.href = "/";
-                                    }}
+                                    onClick={handleLogout}
                                     className="flex items-center gap-4 text-[var(--color-error-600)] text-[14px] font-700 py-2"
                                 >
                                     <X className="w-5 h-5" />
