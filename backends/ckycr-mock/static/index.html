@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CKYC Mock — Flow UI</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <h1>CKYC registry mock — flow UI</h1>
+      <p class="sub">
+        Browser UI with autofill presets. All fields stay editable. Secured Search uses
+        <strong>server-side</strong> keys to build signed XML (same as the Python example script).
+      </p>
+    </header>
+
+    <section class="panel flow">
+      <h2>End-to-end flow (hosting)</h2>
+      <ol class="steps">
+        <li>
+          <strong>Keys on the server</strong> — Keep <code>keys/cersai_private.pem</code>,
+          <code>keys/cersai_public.pem</code>, <code>keys/fi_private.pem</code>,
+          <code>keys/fi_public.pem</code> on the host filesystem (or map env paths in
+          <code>app/config.py</code>). Never commit private keys. Register the FI’s
+          <strong>public</strong> PEM in the database (step 2).
+        </li>
+        <li>
+          <strong>Register FI</strong> — One row in <code>fi_institution</code> with
+          <code>fi_code</code> + <code>fi_public_key_pem</code> so verify can check XML-DSig and
+          encrypt the response session key.
+        </li>
+        <li>
+          <strong>Batch upload (optional)</strong> — JSON to <code>/ckyc/batch/upload</code> fills
+          <code>kyc_record</code> (PAN, photo, etc.).
+        </li>
+        <li>
+          <strong>Secured search</strong> — Production clients send signed XML to
+          <code>/Search/ckycverificationservice/verify</code>. This UI calls
+          <code>/api/demo/verify-search</code> which builds that XML on the server using the same
+          crypto — for demos only.
+        </li>
+      </ol>
+      <p class="hint">
+        API docs: <a href="/docs">/docs</a> · Health:
+        <button type="button" id="btn-health" class="linkish">GET /health</button>
+        <span id="health-out" class="inline-out"></span>
+      </p>
+    </section>
+
+    <section class="panel scenario-panel">
+      <h2>Recommended scenarios</h2>
+      <p class="hint">
+        Pick a flow or a secured-search case; values fill the matching section below (you can still
+        edit everything). For A/B/D/F/G/02/03 matches, run
+        <code>PYTHONPATH=. python scripts/seed.py</code> once so <code>seed-rec-1</code> has
+        <code>id_json</code>.
+      </p>
+      <div class="scenario-row">
+        <label class="scenario-select-label">
+          Scenario
+          <select id="cfg_select" aria-label="Recommended scenario"></select>
+        </label>
+        <button type="button" id="btn-apply-scenario">Apply again</button>
+      </div>
+      <p id="cfg_blurb" class="hint cfg-blurb"></p>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>1. Register FI</h2>
+        <p class="hint">
+          Autofill includes the default dev <strong>admin token</strong> (override if you set
+          <code>ADMIN_TOKEN</code> in env). Use <strong>Load sample FI public key</strong> for
+          <code>keys/fi_public.pem</code>. Change <code>fi_code</code> if that code already exists.
+        </p>
+        <button type="button" id="btn-autofill-fi">Autofill text fields</button>
+        <button type="button" id="btn-load-pem">Load sample FI public key</button>
+        <form id="form-fi">
+          <label>Admin token (dev default; use text so autofill is visible)
+            <input
+              type="text"
+              id="fi_admin_token"
+              name="admin_token"
+              autocomplete="off"
+              spellcheck="false"
+              value="dev-admin-token-change-me"
+            />
+          </label>
+          <label>FI code <input type="text" id="fi_fi_code" name="fi_code" maxlength="6" /></label>
+          <label>Name <input type="text" id="fi_name" name="name" /></label>
+          <label>Registered IP (optional) <input type="text" id="fi_registered_ip" name="registered_ip" placeholder="127.0.0.1" /></label>
+          <label>FI public key (PEM) <textarea id="fi_public_key_pem" name="fi_public_key_pem" rows="8" spellcheck="false"></textarea></label>
+          <button type="submit">POST /api/ui/register-fi</button>
+        </form>
+        <pre id="fi-out" class="out"></pre>
+        <pre id="fi-pem-out" class="out small"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>2. Batch upload (JSON)</h2>
+        <p class="hint">Edit JSON freely. <code>batch_reference</code> must be new each time.</p>
+        <button type="button" id="btn-autofill-batch">Autofill sample batch</button>
+        <form id="form-batch">
+          <textarea id="batch_json" name="batch_json" rows="18" spellcheck="false"></textarea>
+          <button type="submit">POST /ckyc/batch/upload</button>
+        </form>
+        <pre id="batch-out" class="out"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>3. Batch status</h2>
+        <label>batch_id <input type="text" id="status_batch_id" placeholder="from upload response" /></label>
+        <button type="button" id="btn-status">GET /ckyc/batch/{id}/status</button>
+        <pre id="status-out" class="out"></pre>
+      </section>
+
+      <section class="panel wide">
+        <h2>4. Secured search (demo)</h2>
+        <p class="hint">
+          Uses server keys to build v1.3 XML and runs verify in-process. The demo JSON body only has
+          <code>id_type</code> and <code>id_no</code> — there is no separate <code>PAN</code> key. For PAN search,
+          use type <strong>C</strong> and put the PAN in <code>id_no</code>; inside the encrypted PID that becomes
+          <code>&lt;ID_TYPE&gt;C&lt;/ID_TYPE&gt;</code> and <code>&lt;ID_NO&gt;…&lt;/ID_NO&gt;</code>.
+          <strong>C</strong> = PAN (4th char <code>ABCFGHJLPT</code>);
+          <strong>E</strong> = Aadhaar-style <code>last4|name|DD-MM-YYYY|gender</code>;
+          <strong>Z</strong> / <strong>Y</strong> = CKYC number / reference;
+          <strong>A,B,D,F,G,02,03</strong> = matched via <code>id_json</code> on the record (see seed).
+          v1.3 search <code>PID_DATA</code> response does not define a <code>&lt;PAN&gt;</code> element.
+          <strong>Z/Y</strong> fixed presets match <code>scripts/seed.py</code> only; after batch upload, copy
+          CKYC numbers from batch status. <strong>E</strong> must match stored aadhaar last four + name + DOB + gender
+          (default batch JSON includes them).
+        </p>
+        <label class="row-full">
+          Search preset
+          <select id="sv_preset" aria-label="Search preset autofill"></select>
+        </label>
+        <p id="sv_preset_blurb" class="hint"></p>
+        <button type="button" id="btn-autofill-search">Autofill C — PAN (seed)</button>
+        <form id="form-search">
+          <div class="row">
+            <label>FI code <input type="text" id="sv_fi_code" maxlength="6" /></label>
+            <label>Request ID (empty = random) <input type="text" id="sv_request_id" maxlength="8" /></label>
+            <label>ID type <select id="sv_id_type" aria-label="ID type"></select></label>
+          </div>
+          <label class="id-no-label">
+            ID number
+            <textarea id="sv_id_no" rows="3" spellcheck="false" placeholder="PAN, pipe-separated E, or id_json value"></textarea>
+          </label>
+          <button type="submit">POST /api/demo/verify-search</button>
+        </form>
+        <p class="hint search-api-meaning">
+          <strong>Response fields:</strong> <code>http_status</code> — HTTP result;
+          <code>request_id_used</code> — idempotency key for the day;
+          <code>request_xml</code> — signed REQ_ROOT you effectively sent;
+          <code>response_xml</code> — CERSAI-signed reply (encrypted PID + session key);
+          <code>decrypted_pid_xml</code> — KYC payload after decrypting with the FI private key (what a real FI client would derive).
+          <strong>PAN / Aadhaar:</strong> v1.3 response <code>PID_DATA</code> does not include a PAN tag; full Aadhaar is not returned. Type E search uses last four + demographics only.
+        </p>
+        <div id="search-result" class="out search-result" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <footer class="foot">
+      <p>Mock only — not production CKYC. Restrict network access when hosting.</p>
+    </footer>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

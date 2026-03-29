@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DigiLocker Identity Verification Flow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: rgba(30, 41, 59, 0.7);
+            --primary-color: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.5);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--surface-color);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .doc-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .doc-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary-color);
+            box-shadow: 0 10px 30px -10px var(--primary-glow);
+        }
+
+        .doc-card h2 {
+            margin: 0 0 0.5rem 0;
+            color: #fff;
+        }
+
+        .doc-card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .loading-view, .result-view, .pan-form-view {
+            display: none;
+            text-align: center;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 2rem auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .json-dump {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: left;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #a7f3d0;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-top: 1rem;
+        }
+
+        button.btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: background 0.3s, transform 0.2s;
+            width: 100%;
+        }
+
+        button.btn-secondary {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: background 0.3s;
+            width: 100%;
+        }
+
+        button.btn-primary:active { transform: scale(0.98); }
+        button.btn-primary:hover { background: #2563eb; }
+        button.btn-secondary:hover { background: rgba(255, 255, 255, 0.05); }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container" id="app-container">
+        <div class="content">
+            <!-- State 1: Selection -->
+            <div id="selection-view">
+                <h1>Verify Your Identity</h1>
+                <p class="subtitle">Select the document you wish to fetch securely from DigiLocker.</p>
+                <div class="grid">
+                    <div class="doc-card" onclick="startFlow('ADHAR')">
+                        <h2>Aadhaar Card</h2>
+                        <p>Verify via UIDAI via DigiLocker</p>
+                    </div>
+                    <div class="doc-card" onclick="showPanForm()">
+                        <h2>PAN Card</h2>
+                        <p>Verify Income Tax Dept records via DigiLocker</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- State 1.5: PAN Details Form -->
+            <div id="pan-form-view" class="pan-form-view">
+                <h1>Enter PAN Details</h1>
+                <p class="subtitle">DigiLocker requires your PAN dimensions to fetch the record.</p>
+                
+                <div class="form-group">
+                    <label>PAN Number</label>
+                    <input type="text" id="pan-no" placeholder="e.g. ABCDE1234F" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>Full Name (As on PAN Card)</label>
+                    <input type="text" id="pan-name" placeholder="John Doe" style="text-transform: uppercase;">
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn-secondary" onclick="resetFlow()">Back</button>
+                    <button class="btn-primary" onclick="submitPanForm()">Continue to DigiLocker</button>
+                </div>
+            </div>
+
+            <!-- State 2: Redirecting / Polling -->
+            <div id="loading-view" class="loading-view">
+                <div class="loader"></div>
+                <h2 id="loading-title">Connecting to DigiLocker...</h2>
+                <p class="subtitle" id="loading-subtitle">Please approve the request in the new window.</p>
+                <button class="btn-secondary" onclick="resetFlow()" style="margin-top: 1rem; cursor: pointer;">Reset Flow (Stuck?)</button>
+            </div>
+
+            <!-- State 3: Final Result JSON -->
+            <div id="result-view" class="result-view">
+                <h1>Verification Successful</h1>
+                <p class="subtitle">Here is the extracted data returned by the API webhook.</p>
+                <div class="json-dump" id="json-output"></div>
+                <button class="btn-primary" onclick="resetFlow()" style="margin-top: 2rem;">Verify Another Document</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const selectionView = document.getElementById('selection-view');
+        const panFormView = document.getElementById('pan-form-view');
+        const loadingView = document.getElementById('loading-view');
+        const resultView = document.getElementById('result-view');
+        const appContainer = document.getElementById('app-container');
+        const jsonOutput = document.getElementById('json-output');
+
+        let pollInterval;
+
+        // Check if we are returning from DigiLocker IDfy flow
+        const urlParams = new URLSearchParams(window.location.search);
+        const returningTaskId = urlParams.get('task_id');
+
+        if (returningTaskId) {
+            showPollingState(returningTaskId);
+        }
+
+        function showPanForm() {
+            selectionView.style.display = 'none';
+            panFormView.style.display = 'block';
+        }
+
+        function submitPanForm() {
+            const panNo = document.getElementById('pan-no').value.trim().toUpperCase();
+            const panName = document.getElementById('pan-name').value.trim().toUpperCase();
+
+            if (!panNo || !panName) {
+                alert("Please fill out both PAN Number and Full Name.");
+                return;
+            }
+
+            const extraFields = {
+                "panno": panNo,
+                "PANFullName": panName
+            };
+
+            startFlow('PANCR', extraFields);
+        }
+
+        async function startFlow(docType, extraFields = {}) {
+            selectionView.style.display = 'none';
+            panFormView.style.display = 'none';
+            loadingView.style.display = 'block';
+            document.getElementById('loading-title').innerText = "Generating Request...";
+            document.getElementById('loading-subtitle').innerText = "Initiating flow with IDfy API...";
+
+            try {
+                const response = await fetch('/start-digilocker', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        doc_type: docType,
+                        extra_fields: extraFields,
+                        redirect_url: window.location.origin + window.location.pathname
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || "API Error");
+                }
+
+                const taskId = data.task_id;
+                const redirectUrl = data.redirect_url;
+                
+                localStorage.setItem('digilocker_active_task_id', taskId);
+                
+                document.getElementById('loading-title').innerText = "Redirecting you securely...";
+                setTimeout(() => {
+                    window.location.href = redirectUrl;
+                }, 800);
+
+            } catch (err) {
+                alert("Error starting flow: " + err.message);
+                resetFlow();
+            }
+        }
+
+        function showPollingState(taskId) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            selectionView.style.display = 'none';
+            panFormView.style.display = 'none';
+            loadingView.style.display = 'block';
+            document.getElementById('loading-title').innerText = "Gathering Results...";
+            document.getElementById('loading-subtitle').innerText = "Waiting for IDfy webhook to arrive...";
+
+            pollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/result/${taskId}`);
+                    const resultData = await res.json();
+
+                    if (resultData.status === "completed") {
+                        clearInterval(pollInterval);
+                        localStorage.removeItem('digilocker_active_task_id');
+                        showResultState(resultData.data);
+                    } else if (resultData.status !== "pending") {
+                        clearInterval(pollInterval);
+                        alert("Fetch failed or error.");
+                        resetFlow();
+                    }
+                } catch (e) {
+                    console.error("Polling error", e);
+                }
+            }, 2000);
+        }
+
+        function showResultState(dataPayload) {
+            loadingView.style.display = 'none';
+            resultView.style.display = 'block';
+            appContainer.style.maxWidth = "900px";
+            jsonOutput.innerHTML = JSON.stringify(dataPayload, null, 4);
+        }
+
+        function resetFlow() {
+            if (pollInterval) clearInterval(pollInterval);
+            localStorage.removeItem('digilocker_active_task_id');
+            appContainer.style.maxWidth = "800px";
+            selectionView.style.display = 'block';
+            panFormView.style.display = 'none';
+            loadingView.style.display = 'none';
+            resultView.style.display = 'none';
+            
+            // Clear inputs
+            document.getElementById('pan-no').value = '';
+            document.getElementById('pan-name').value = '';
+        }
+
+        const storedTaskId = localStorage.getItem('digilocker_active_task_id');
+        if (storedTaskId && !returningTaskId) {
+            showPollingState(storedTaskId);
+        }
+
+    </script>
+</body>
+</html>

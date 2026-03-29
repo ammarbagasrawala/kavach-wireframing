@@ -1,0 +1,1 @@
+"""CKYCR FastAPI mock application."""

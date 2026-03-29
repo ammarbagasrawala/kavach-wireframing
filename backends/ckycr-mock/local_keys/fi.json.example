@@ -1,0 +1,5 @@
+{
+  "label": "FI / bank (signing + decrypt responses)",
+  "public_pem": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
+  "private_pem": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+}
